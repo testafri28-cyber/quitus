@@ -1,0 +1,253 @@
+// Prisma schema — Système de tickets WCA + IDC (PostgreSQL)
+// Convention : champs JS en camelCase, colonnes SQL en snake_case via @map.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  MEMBER // tout le monde : peut soumettre ET intervenir sur les demandes de son service
+  ADMIN  // vue globale + gestion
+}
+
+enum Urgency {
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum TicketType {
+  INTERVENTION // quelque chose ne fonctionne pas, action corrective attendue
+  NEED // demande de prestation, ressource ou service à planifier
+}
+
+enum Space {
+  GLOBAL
+  WCA
+  IDC
+}
+
+enum TicketStatus {
+  NEW
+  IN_PROGRESS
+  ON_HOLD
+  RESOLVED
+  CLOSED
+}
+
+model Company {
+  id    String @id @default(cuid())
+  name  String // "WCA" | "IDC"
+  slug  String @unique // "wca" | "idc"
+  color String // "#185FA5" (WCA) | "#BA7517" (IDC)
+
+  users         User[]
+  departments   Department[]
+  sourceTickets Ticket[] @relation("TicketSource")
+
+  @@map("companies")
+}
+
+model Department {
+  id        String  @id @default(cuid())
+  name      String
+  code      String  @unique
+  companyId String? @map("company_id") // null = service commun aux deux entreprises
+  company   Company? @relation(fields: [companyId], references: [id])
+
+  agents  User[]
+  tickets Ticket[]
+
+  @@index([companyId])
+  @@map("departments")
+}
+
+model User {
+  id           String      @id @default(cuid())
+  name         String
+  email        String      @unique
+  passwordHash String      @map("password_hash")
+  role         Role        @default(MEMBER)
+
+  companyId    String      @map("company_id")
+  company      Company     @relation(fields: [companyId], references: [id])
+
+  departmentId String?     @map("department_id")
+  department   Department? @relation(fields: [departmentId], references: [id])
+
+  createdAt    DateTime    @default(now()) @map("created_at")
+
+  // Préférences de notification hors-site
+  notifyEmail Boolean @default(true) @map("notify_email")
+  notifyPush  Boolean @default(true) @map("notify_push")
+
+  submittedTickets  Ticket[]         @relation("TicketSubmitter")
+  assignedTickets   Ticket[]         @relation("TicketAssignee")
+  suggestedTickets  Ticket[]         @relation("TicketSuggested")
+  transferTickets   Ticket[]         @relation("TicketTransfer")
+  comments          Comment[]
+  uploadedDocuments TicketDocument[]
+  notifications     Notification[]
+  actedEvents       TicketEvent[]
+  pushSubscriptions PushSubscription[]
+
+  @@index([role])
+  @@index([companyId])
+  @@index([departmentId])
+  @@map("users")
+}
+
+model Ticket {
+  id          String       @id @default(cuid())
+  reference   String       @unique // numéro affiché, ex: TCK-000123
+  title       String
+  description String
+  category    String // libellé choisi dans le formulaire
+  type        TicketType   @default(INTERVENTION)
+  urgency     Urgency      @default(NORMAL)
+  status      TicketStatus @default(NEW)
+
+  // Espace d'origine de la demande (trace : /global, /wca, /idc).
+  sourceSpace Space @default(GLOBAL) @map("source_space")
+
+  // Entreprise émettrice (badge WCA bleu / IDC orange).
+  sourceCompanyId String  @map("source_company_id")
+  sourceCompany   Company @relation("TicketSource", fields: [sourceCompanyId], references: [id])
+
+  // Service destinataire (peut être commun, WCA ou IDC).
+  departmentId String     @map("department_id")
+  department   Department @relation(fields: [departmentId], references: [id])
+
+  submittedById String @map("submitted_by")
+  submitter     User   @relation("TicketSubmitter", fields: [submittedById], references: [id])
+
+  assignedToId String? @map("assigned_to")
+  assignee     User?   @relation("TicketAssignee", fields: [assignedToId], references: [id])
+
+  // Membre suggéré par le demandeur (indication douce, n'assigne pas).
+  suggestedToId String? @map("suggested_to")
+  suggestedTo   User?   @relation("TicketSuggested", fields: [suggestedToId], references: [id])
+
+  // Transfert en attente d'acceptation (proposé par l'assigné à un collègue du service).
+  transferToId String? @map("transfer_to")
+  transferTo   User?   @relation("TicketTransfer", fields: [transferToId], references: [id])
+
+  attachmentUrl String?   @map("attachment_url")
+
+  // Demande de congé (renseigné quand la demande est un congé adressé aux RH).
+  leaveStart DateTime? @map("leave_start")
+  leaveEnd   DateTime? @map("leave_end")
+  leaveKind  String?   @map("leave_kind") // "paye" | "maladie" | "sans-solde" | "autre"
+
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  resolvedAt    DateTime? @map("resolved_at")
+
+  comments      Comment[]
+  feedback      Feedback?
+  documents     TicketDocument[]
+  notifications Notification[]
+  events        TicketEvent[]
+
+  @@index([departmentId, status])
+  @@index([submittedById])
+  @@index([assignedToId])
+  @@index([sourceCompanyId])
+  @@index([sourceSpace])
+  @@index([type])
+  @@map("tickets")
+}
+
+model Comment {
+  id         String   @id @default(cuid())
+  ticketId   String   @map("ticket_id")
+  ticket     Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  authorId   String   @map("author_id")
+  author     User     @relation(fields: [authorId], references: [id])
+  content    String
+  isInternal Boolean  @default(false) @map("is_internal")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([ticketId])
+  @@map("comments")
+}
+
+model TicketDocument {
+  id           String   @id @default(cuid())
+  ticketId     String   @map("ticket_id")
+  ticket       Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  url          String
+  name         String
+  uploadedById String   @map("uploaded_by")
+  uploadedBy   User     @relation(fields: [uploadedById], references: [id])
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([ticketId])
+  @@map("ticket_documents")
+}
+
+model TicketEvent {
+  id        String   @id @default(cuid())
+  ticketId  String   @map("ticket_id")
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  actorId   String?  @map("actor_id")
+  actor     User?    @relation(fields: [actorId], references: [id])
+  action    String // created | status | assigned | unassigned | reassigned | transfer_proposed | transfer_accepted | transfer_refused | transfer_cancelled | comment | document | feedback
+  detail    String? // JSON sérialisé (ex. {from,to})
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([ticketId])
+  @@index([createdAt])
+  @@map("ticket_events")
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@map("push_subscriptions")
+}
+
+model Setting {
+  key   String @id
+  value String
+
+  @@map("settings")
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String // new_ticket | suggested | assigned | status | comment | transfer_proposed | transfer_accepted | transfer_refused
+  text      String
+  ticketId  String?  @map("ticket_id")
+  ticket    Ticket?  @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId, read])
+  @@map("notifications")
+}
+
+model Feedback {
+  id        String   @id @default(cuid())
+  ticketId  String   @unique @map("ticket_id")
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  rating    Int // 1 à 5
+  comment   String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("feedback")
+}
