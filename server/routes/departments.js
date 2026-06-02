@@ -12,7 +12,10 @@ router.get("/", requireAuth, async (_req, res, next) => {
   try {
     const departments = await prisma.department.findMany({
       orderBy: [{ companyId: "asc" }, { name: "asc" }],
-      include: { company: { select: { id: true, name: true, slug: true, color: true } } },
+      include: {
+        company: { select: { id: true, name: true, slug: true, color: true } },
+        responsible: { select: { id: true, name: true } },
+      },
     });
     res.json({ departments });
   } catch (err) {
@@ -45,6 +48,33 @@ router.post("/companies", requireAuth, requireRole("ADMIN"), async (req, res, ne
     res.status(201).json({ company });
   } catch (err) {
     if (err.code === "P2002") return res.status(409).json({ error: "Ce slug d'entreprise existe déjà." });
+    next(err);
+  }
+});
+
+// PATCH /api/departments/:id — désigner le responsable / renommer (admin)
+const updateDeptSchema = z.object({
+  responsibleId: z.string().nullable().optional(),
+  name: z.string().min(2).optional(),
+});
+router.patch("/:id", requireAuth, requireRole("ADMIN"), async (req, res, next) => {
+  try {
+    const parsed = updateDeptSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0].message });
+    if (parsed.data.responsibleId) {
+      const u = await prisma.user.findUnique({ where: { id: parsed.data.responsibleId } });
+      if (!u || u.departmentId !== req.params.id) {
+        return res.status(400).json({ error: "Le responsable doit être un membre de ce service." });
+      }
+    }
+    const department = await prisma.department.update({
+      where: { id: req.params.id },
+      data: parsed.data,
+      include: { company: { select: { id: true, name: true, slug: true, color: true } }, responsible: { select: { id: true, name: true } } },
+    });
+    res.json({ department });
+  } catch (err) {
+    if (err.code === "P2025") return res.status(404).json({ error: "Service introuvable." });
     next(err);
   }
 });
@@ -82,10 +112,84 @@ router.get("/:id/members", requireAuth, async (req, res, next) => {
   try {
     const members = await prisma.user.findMany({
       where: { departmentId: req.params.id, role: "MEMBER" },
-      select: { id: true, name: true },
+      select: { id: true, name: true, email: true },
       orderBy: { name: "asc" },
     });
     res.json({ members });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Charge un service + vérifie que l'appelant peut gérer son équipe (admin ou responsable).
+async function loadManageableDept(req, res) {
+  const dep = await prisma.department.findUnique({ where: { id: req.params.id } });
+  if (!dep) { res.status(404).json({ error: "Service introuvable." }); return null; }
+  if (req.user.role !== "ADMIN" && dep.responsibleId !== req.user.id) {
+    res.status(403).json({ error: "Réservé au responsable du service." });
+    return null;
+  }
+  return dep;
+}
+
+// GET /api/departments/:id/candidates — membres ajoutables (non rattachés, même entreprise si le service en a une)
+router.get("/:id/candidates", requireAuth, async (req, res, next) => {
+  try {
+    const dep = await loadManageableDept(req, res);
+    if (!dep) return;
+    const where = { role: "MEMBER", NOT: { departmentId: dep.id } };
+    if (dep.companyId) where.companyId = dep.companyId; // service d'entreprise → on reste dans l'entreprise
+    const candidates = await prisma.user.findMany({
+      where,
+      select: { id: true, name: true, email: true, department: { select: { id: true, name: true } } },
+      orderBy: { name: "asc" },
+    });
+    res.json({ candidates });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/departments/:id/members { userId } — rattacher un membre au service (admin ou responsable)
+const addMemberSchema = z.object({ userId: z.string() });
+router.post("/:id/members", requireAuth, async (req, res, next) => {
+  try {
+    const dep = await loadManageableDept(req, res);
+    if (!dep) return;
+    const parsed = addMemberSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: "Paramètres invalides." });
+    const target = await prisma.user.findUnique({ where: { id: parsed.data.userId } });
+    if (!target) return res.status(404).json({ error: "Utilisateur introuvable." });
+    if (target.role !== "MEMBER") return res.status(400).json({ error: "Seul un membre peut rejoindre un service." });
+    if (dep.companyId && target.companyId !== dep.companyId) {
+      return res.status(400).json({ error: "Ce membre appartient à une autre entreprise." });
+    }
+    const member = await prisma.user.update({
+      where: { id: target.id },
+      data: { departmentId: dep.id },
+      select: { id: true, name: true, email: true },
+    });
+    res.status(201).json({ member });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// DELETE /api/departments/:id/members/:userId — retirer un membre du service (admin ou responsable)
+router.delete("/:id/members/:userId", requireAuth, async (req, res, next) => {
+  try {
+    const dep = await loadManageableDept(req, res);
+    if (!dep) return;
+    const target = await prisma.user.findUnique({ where: { id: req.params.userId } });
+    if (!target || target.departmentId !== dep.id) {
+      return res.status(404).json({ error: "Ce membre n'appartient pas à ce service." });
+    }
+    await prisma.user.update({ where: { id: target.id }, data: { departmentId: null } });
+    // S'il était responsable du service, on libère la responsabilité.
+    if (dep.responsibleId === target.id) {
+      await prisma.department.update({ where: { id: dep.id }, data: { responsibleId: null } });
+    }
+    res.status(204).end();
   } catch (err) {
     next(err);
   }

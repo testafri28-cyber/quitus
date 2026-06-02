@@ -13,18 +13,21 @@ function navItemsFor(space, counts) {
       { k: "form", label: "Nouvelle demande", icon: "plusCircle" },
       { k: "leave", label: "Demande de congé", icon: "calendar" },
       { k: "dashboard", label: "Suivi des demandes", icon: "inbox", badge: counts.total },
+      { k: "chat", label: "Discussion", icon: "message" },
     ];
   if (space === "admin")
     return [
       { k: "dashboard", label: "Toutes les demandes", icon: "inbox", badge: counts.total },
       { k: "form", label: "Nouvelle demande", icon: "plusCircle" },
       { k: "services", label: "Annuaire des services", icon: "grid" },
+      { k: "chat", label: "Discussion", icon: "message" },
       { k: "gestion", label: "Gestion", icon: "settings" },
     ];
   return [
     { k: "dashboard", label: "File de tickets", icon: "inbox", badge: counts.open },
     { k: "form", label: "Nouvelle demande", icon: "plusCircle" },
     { k: "leave", label: "Demande de congé", icon: "calendar" },
+    { k: "chat", label: "Discussion", icon: "message" },
     { k: "services", label: "Annuaire des services", icon: "grid" },
   ];
 }

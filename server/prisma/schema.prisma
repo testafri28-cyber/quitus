@@ -60,8 +60,13 @@ model Department {
   companyId String? @map("company_id") // null = service commun aux deux entreprises
   company   Company? @relation(fields: [companyId], references: [id])
 
-  agents  User[]
-  tickets Ticket[]
+  // Responsable du service (désigné par l'admin) : peut créer/gérer le salon du service.
+  responsibleId String? @map("responsible_id")
+  responsible   User?   @relation("DeptResponsible", fields: [responsibleId], references: [id])
+
+  agents   User[]    @relation("DeptMembers")
+  tickets  Ticket[]
+  chatRoom ChatRoom?
 
   @@index([companyId])
   @@map("departments")
@@ -78,7 +83,7 @@ model User {
   company      Company     @relation(fields: [companyId], references: [id])
 
   departmentId String?     @map("department_id")
-  department   Department? @relation(fields: [departmentId], references: [id])
+  department   Department? @relation("DeptMembers", fields: [departmentId], references: [id])
 
   createdAt    DateTime    @default(now()) @map("created_at")
 
@@ -95,6 +100,8 @@ model User {
   notifications     Notification[]
   actedEvents       TicketEvent[]
   pushSubscriptions PushSubscription[]
+  managedDepartments Department[]    @relation("DeptResponsible")
+  chatMessages       ChatMessage[]
 
   @@index([role])
   @@index([companyId])
@@ -204,6 +211,38 @@ model TicketEvent {
   @@index([ticketId])
   @@index([createdAt])
   @@map("ticket_events")
+}
+
+enum ChatScope {
+  GLOBAL
+  DEPARTMENT
+}
+
+model ChatRoom {
+  id           String      @id @default(cuid())
+  name         String
+  scope        ChatScope
+  departmentId String?     @unique @map("department_id") // null = salon global
+  department   Department? @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  archived     Boolean     @default(false)
+  createdAt    DateTime    @default(now()) @map("created_at")
+
+  messages ChatMessage[]
+
+  @@map("chat_rooms")
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  roomId    String   @map("room_id")
+  room      ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  authorId  String   @map("author_id")
+  author    User     @relation(fields: [authorId], references: [id])
+  content   String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([roomId])
+  @@map("chat_messages")
 }
 
 model PushSubscription {

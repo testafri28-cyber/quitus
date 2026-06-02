@@ -1,8 +1,10 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
+import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { initSocket } from "./socket.js";
 
 import authRoutes from "./routes/auth.js";
 import ticketRoutes from "./routes/tickets.js";
@@ -12,6 +14,7 @@ import notificationRoutes from "./routes/notifications.js";
 import settingRoutes from "./routes/settings.js";
 import auditRoutes from "./routes/audit.js";
 import pushRoutes from "./routes/push.js";
+import chatRoutes from "./routes/chat.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -39,6 +42,7 @@ app.use("/api/notifications", notificationRoutes);
 app.use("/api/settings", settingRoutes);
 app.use("/api/audit", auditRoutes);
 app.use("/api/push", pushRoutes);
+app.use("/api/chat", chatRoutes);
 
 // 404
 app.use((req, res) => {
@@ -54,6 +58,8 @@ app.use((err, _req, res, _next) => {
 });
 
 const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => {
-  console.log(`🚀 API en écoute sur http://localhost:${PORT}`);
+const server = http.createServer(app);
+initSocket(server); // Socket.IO (discussion temps réel)
+server.listen(PORT, () => {
+  console.log(`🚀 API + WebSocket en écoute sur http://localhost:${PORT}`);
 });

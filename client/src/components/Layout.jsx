@@ -9,6 +9,7 @@ const SCREEN_LABELS = {
   "": "Accueil",
   form: "Nouvelle demande",
   leave: "Demande de congé",
+  chat: "Discussion",
   services: "Annuaire des services",
   gestion: "Gestion",
   tickets: "Ticket",

@@ -12,6 +12,7 @@ import PrintDocument from "./pages/PrintDocument.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import TicketDetail from "./pages/TicketDetail.jsx";
 import ServicesAnnuaire from "./pages/ServicesAnnuaire.jsx";
+import Chat from "./pages/Chat.jsx";
 import AdminGestion from "./pages/AdminGestion.jsx";
 
 function HomeRedirect() {
@@ -49,6 +50,7 @@ export default function App() {
           <Route path="leave" element={<LeaveRequest />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="services" element={<ServicesAnnuaire />} />
+          <Route path="chat" element={<Chat />} />
           <Route path="gestion" element={<AdminGestion />} />
           <Route path="tickets/:id" element={<TicketDetail />} />
         </Route>

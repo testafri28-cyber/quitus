@@ -35,13 +35,13 @@ export default function Submit() {
 
   const [departments, setDepartments] = useState([]);
   const [type, setType] = useState("INTERVENTION");
-  const [title, setTitle] = useState("");
+  const [title, setTitle] = useState(searchParams.get("title") || "");
   const [service, setService] = useState(searchParams.get("service") || null);
   const [members, setMembers] = useState([]);
   const [suggested, setSuggested] = useState("");
   const [suggestEnabled, setSuggestEnabled] = useState(true);
   const [urgency, setUrgency] = useState("NORMAL");
-  const [desc, setDesc] = useState("");
+  const [desc, setDesc] = useState(searchParams.get("description") || "");
   const [file, setFile] = useState(null);
   const [touched, setTouched] = useState(false);
   const [busy, setBusy] = useState(false);

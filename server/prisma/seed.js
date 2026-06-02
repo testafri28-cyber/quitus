@@ -111,6 +111,25 @@ async function main() {
     if (!employees[m.company]) employees[m.company] = user; // premier membre de l'entreprise = émetteur démo
   }
 
+  /* ---------------- Responsables de service + salons ---------------- */
+  // Responsable = premier membre du service (l'admin pourra le changer ensuite).
+  for (const [code, member] of Object.entries(memberByDept)) {
+    await prisma.department.update({ where: { id: depts[code].id }, data: { responsibleId: member.id } });
+  }
+  // Salon global (un seul).
+  const existingGlobal = await prisma.chatRoom.findFirst({ where: { scope: "GLOBAL" } });
+  if (!existingGlobal) {
+    await prisma.chatRoom.create({ data: { name: "Salon général", scope: "GLOBAL" } });
+  }
+  // Salons de démo pour les services à 2 membres (IT, Logistique & Parc).
+  for (const code of ["it", "wca-log-parc"]) {
+    await prisma.chatRoom.upsert({
+      where: { departmentId: depts[code].id },
+      update: {},
+      create: { name: depts[code].name, scope: "DEPARTMENT", departmentId: depts[code].id },
+    });
+  }
+
   /* ---------------- 10 tickets exemples ---------------- */
   // sourceCompany = entreprise de l'employé émetteur ; department = routage par catégorie.
   // `ago` = ancienneté en jours (pour démontrer les alertes : urgentes, anciennes non assignées, traitements qui traînent).

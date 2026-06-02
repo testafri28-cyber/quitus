@@ -149,6 +149,13 @@ router.patch("/:id", requireAuth, requireRole("ADMIN"), async (req, res, next) =
       data: parsed.data,
       select: userSelect,
     });
+    // Si le membre quitte un service dont il était responsable, on libère cette responsabilité.
+    if (parsed.data.departmentId !== undefined || parsed.data.role === "ADMIN") {
+      const where = user.departmentId
+        ? { responsibleId: user.id, id: { not: user.departmentId } } // garde la responsabilité de son service actuel
+        : { responsibleId: user.id }; // plus aucun service → on libère partout
+      await prisma.department.updateMany({ where, data: { responsibleId: null } });
+    }
     res.json({ user });
   } catch (err) {
     if (err.code === "P2025") return res.status(404).json({ error: "Utilisateur introuvable." });

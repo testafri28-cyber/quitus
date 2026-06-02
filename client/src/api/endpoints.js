@@ -39,11 +39,23 @@ export const departmentsApi = {
   companies: () => api.get("/departments/companies"),
   createCompany: (payload) => api.post("/departments/companies", payload),
   members: (id) => api.get(`/departments/${id}/members`),
+  candidates: (id) => api.get(`/departments/${id}/candidates`),
+  addMember: (id, userId) => api.post(`/departments/${id}/members`, { userId }),
+  removeMember: (id, userId) => api.del(`/departments/${id}/members/${userId}`),
   categories: () => api.get("/departments/categories"),
   stats: () => api.get("/departments/stats"),
   create: (payload) => api.post("/departments", payload),
   remove: (id) => api.del(`/departments/${id}`),
   removeCompany: (id) => api.del(`/departments/companies/${id}`),
+  setResponsible: (id, responsibleId) => api.patch(`/departments/${id}`, { responsibleId }),
+};
+
+export const chatApi = {
+  rooms: () => api.get("/chat/rooms"),
+  createRoom: (payload) => api.post("/chat/rooms", payload),
+  patchRoom: (id, payload) => api.patch(`/chat/rooms/${id}`, payload),
+  deleteRoom: (id) => api.del(`/chat/rooms/${id}`),
+  messages: (id) => api.get(`/chat/rooms/${id}/messages`),
 };
 
 export const settingsApi = {

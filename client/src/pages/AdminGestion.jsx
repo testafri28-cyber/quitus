@@ -145,6 +145,7 @@ function Users() {
   };
   const remove = async (id) => { setErr(""); try { await usersApi.remove(id); load(); } catch (e) { setErr(e.message); } };
   const changeRole = async (u, role) => { setErr(""); try { await usersApi.update(u.id, { role }); load(); } catch (e) { setErr(e.message); } };
+  const changeDept = async (u, departmentId) => { setErr(""); try { await usersApi.update(u.id, { departmentId: departmentId || null }); load(); } catch (e) { setErr(e.message); } };
 
   return (
     <div style={{ display: "grid", gap: 20 }}>
@@ -183,7 +184,16 @@ function Users() {
                   <option value="MEMBER">Membre</option><option value="ADMIN">Admin</option>
                 </select>
               </td>
-              <td className="muted">{u.department?.name || "—"}</td>
+              <td>
+                {u.role === "ADMIN" ? (
+                  <span className="muted">—</span>
+                ) : (
+                  <select className="select" style={{ padding: "5px 8px", width: "auto", maxWidth: 220 }} value={u.department?.id || ""} onChange={(e) => changeDept(u, e.target.value)}>
+                    <option value="">— Aucun service —</option>
+                    {departments.map((d) => <option key={d.id} value={d.id}>{d.name}{d.company ? ` (${d.company.name})` : " (commun)"}</option>)}
+                  </select>
+                )}
+              </td>
               <td style={{ textAlign: "right" }}>{u.id !== current.id && <button className="btn btn-danger btn-sm" onClick={() => remove(u.id)}>Supprimer</button>}</td>
             </tr>
           ))}
@@ -269,16 +279,49 @@ function Depts() {
 
       <div className="group-grid">
         {departments.map((d) => (
-          <div key={d.id} className="card card-pad spread">
-            <div><div style={{ fontWeight: 600 }}>{d.name}</div><div className="mono muted" style={{ fontSize: 12 }}>{d.code}</div></div>
-            <div className="row" style={{ gap: 8 }}>
-              {d.company ? <EmitterBadge company={d.company} /> : <span className="muted" style={{ fontSize: 12 }}>commun</span>}
-              <button className="icon-btn" title="Supprimer le service" onClick={() => removeDept(d.id, d.name)}><Icon name="trash" /></button>
+          <div key={d.id} className="card card-pad">
+            <div className="spread">
+              <div><div style={{ fontWeight: 600 }}>{d.name}</div><div className="mono muted" style={{ fontSize: 12 }}>{d.code}</div></div>
+              <div className="row" style={{ gap: 8 }}>
+                {d.company ? <EmitterBadge company={d.company} /> : <span className="muted" style={{ fontSize: 12 }}>commun</span>}
+                <button className="icon-btn" title="Supprimer le service" onClick={() => removeDept(d.id, d.name)}><Icon name="trash" /></button>
+              </div>
+            </div>
+            <div className="row" style={{ gap: 8, marginTop: 10 }}>
+              <span className="muted" style={{ fontSize: 12 }}>Responsable</span>
+              <ResponsibleSelect dept={d} onChanged={load} />
             </div>
           </div>
         ))}
       </div>
     </div>
+  );
+}
+
+// Sélecteur du responsable d'un service — charge les membres au focus, PATCH au changement.
+function ResponsibleSelect({ dept, onChanged }) {
+  const [members, setMembers] = useState(null);
+  const [val, setVal] = useState(dept.responsible?.id || "");
+  const [busy, setBusy] = useState(false);
+
+  const loadMembers = () => {
+    if (members) return;
+    departmentsApi.members(dept.id).then(({ members }) => setMembers(members)).catch(() => setMembers([]));
+  };
+  const change = async (e) => {
+    const id = e.target.value;
+    setVal(id); setBusy(true);
+    try { await departmentsApi.setResponsible(dept.id, id || null); onChanged?.(); }
+    catch { setVal(dept.responsible?.id || ""); }
+    finally { setBusy(false); }
+  };
+
+  return (
+    <select className="select" style={{ padding: "5px 8px", maxWidth: 220 }} value={val} onFocus={loadMembers} onChange={change} disabled={busy}>
+      <option value="">— Aucun responsable —</option>
+      {!members && dept.responsible && <option value={dept.responsible.id}>{dept.responsible.name}</option>}
+      {members && members.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+    </select>
   );
 }
 
