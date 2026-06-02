@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Icon } from "./Icon.jsx";
 import { notificationsApi } from "../api/endpoints.js";
 import { pushSupported, subscribePush, unsubscribePush } from "../lib/push.js";
@@ -53,7 +54,7 @@ export function NotificationPrefsModal({ onClose }) {
     }
   };
 
-  return (
+  return createPortal(
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()} style={{ width: 480 }}>
         <div className="modal-head">
@@ -74,6 +75,7 @@ export function NotificationPrefsModal({ onClose }) {
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

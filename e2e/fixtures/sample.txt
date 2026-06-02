@@ -1,0 +1,1 @@
+[E2E] Pièce jointe de test — rapport de panne fictif pour la suite Playwright.
