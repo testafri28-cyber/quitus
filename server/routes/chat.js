@@ -6,15 +6,15 @@ import path from "path";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "../middleware/auth.js";
 import { canAccessRoom, canManageRoom } from "../services/chat.js";
+import { UPLOAD_DIR } from "../lib/uploads.js";
 
 const router = Router();
 
 const roomInclude = { department: { select: { id: true, name: true, responsibleId: true } } };
 
-// Upload de pièce jointe (mêmes règles que les tickets : stockage local, 10 Mo max).
-const uploadDir = process.env.UPLOAD_DIR || "uploads";
+// Upload de pièce jointe (mêmes règles que les tickets : 10 Mo max).
 const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, uploadDir),
+  destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
   filename: (_req, file, cb) => cb(null, `${crypto.randomUUID()}${path.extname(file.originalname)}`),
 });
 const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });

@@ -5,6 +5,7 @@ import crypto from "node:crypto";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "../middleware/auth.js";
+import { UPLOAD_DIR } from "../lib/uploads.js";
 import { resolveServiceCode, userCanUseSpace, SPACES } from "../services/routing.js";
 import {
   notifyTicketCreated,
@@ -21,10 +22,9 @@ const STATUSES = ["NEW", "IN_PROGRESS", "ON_HOLD", "RESOLVED", "CLOSED"];
 const URGENCIES = ["NORMAL", "HIGH", "URGENT"];
 const TYPES = ["INTERVENTION", "NEED"];
 
-/* ---------------- Upload de pièce jointe (stub local) ---------------- */
-const uploadDir = process.env.UPLOAD_DIR || "uploads";
+/* ---------------- Upload de pièce jointe ---------------- */
 const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, uploadDir),
+  destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
   filename: (_req, file, cb) => cb(null, `${crypto.randomUUID()}${path.extname(file.originalname)}`),
 });
 const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });

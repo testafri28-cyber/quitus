@@ -1,0 +1,58 @@
+# Blueprint Render pour le backend Quitus (Express + Socket.IO + PostgreSQL).
+# Le frontend est déployé séparément sur Vercel (dossier client/).
+#
+# Déploiement : Render → New → Blueprint → sélectionner ce dépôt.
+# Après le 1er déploiement :
+#   - renseigner CLIENT_URL = URL du front Vercel (ex. https://quitus.vercel.app)
+#   - (optionnel) RESEND_API_KEY et les clés VAPID
+#   - lancer une fois le seed via le Shell du service : npm run seed
+#
+# ⚠️ Plan free : système de fichiers ÉPHÉMÈRE → les pièces jointes sont perdues
+#    à chaque redéploiement/redémarrage. Pour les conserver, passer le service en
+#    plan payant et décommenter le bloc « disk » ci-dessous (UPLOAD_DIR=/data/uploads),
+#    ou brancher un stockage objet (S3 / Cloudflare R2).
+
+services:
+  - type: web
+    name: quitus-api
+    runtime: node
+    rootDir: server
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    # disk:
+    #   name: uploads
+    #   mountPath: /data
+    #   sizeGB: 1
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: "7d"
+      - key: CLIENT_URL
+        sync: false            # ← URL du front Vercel (plusieurs séparées par des virgules possible)
+      - key: UPLOAD_DIR
+        value: "uploads"       # ← passer à "/data/uploads" si un disque persistant est monté
+      - key: EMAIL_FROM
+        value: "Support <support@demo.local>"
+      - key: VAPID_SUBJECT
+        value: "mailto:support@demo.local"
+      - key: RESEND_API_KEY
+        sync: false
+      - key: VAPID_PUBLIC_KEY
+        sync: false
+      - key: VAPID_PRIVATE_KEY
+        sync: false
+      - key: DATABASE_URL
+        fromDatabase:
+          name: quitus-db
+          property: connectionString
+
+databases:
+  - name: quitus-db
+    plan: free
+    databaseName: ticketdb
+    user: quitus

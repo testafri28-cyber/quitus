@@ -5,6 +5,8 @@ import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { initSocket } from "./socket.js";
+import { UPLOAD_DIR } from "./lib/uploads.js";
+import { allowedOrigins } from "./lib/cors.js";
 
 import authRoutes from "./routes/auth.js";
 import ticketRoutes from "./routes/tickets.js";
@@ -20,17 +22,11 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app = express();
 
-app.use(
-  cors({
-    origin: process.env.CLIENT_URL || "http://localhost:5173",
-    credentials: true,
-  })
-);
+app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(express.json());
 
-// Fichiers uploadés (stub local). Brancher S3/Cloudinary en prod.
-const uploadDir = process.env.UPLOAD_DIR || "uploads";
-app.use("/uploads", express.static(path.join(__dirname, uploadDir)));
+// Fichiers uploadés (disque local en dev ; disque persistant ou stockage objet en prod).
+app.use("/uploads", express.static(UPLOAD_DIR));
 
 app.get("/health", (_req, res) => res.json({ ok: true }));
 

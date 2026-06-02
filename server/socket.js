@@ -3,12 +3,13 @@ import { Server } from "socket.io";
 import jwt from "jsonwebtoken";
 import { prisma } from "./lib/prisma.js";
 import { canAccessRoom } from "./services/chat.js";
+import { allowedOrigins } from "./lib/cors.js";
 
 const PRESENCES = ["AVAILABLE", "UNAVAILABLE", "ON_LEAVE"];
 
 export function initSocket(httpServer) {
   const io = new Server(httpServer, {
-    cors: { origin: process.env.CLIENT_URL || "http://localhost:5173", credentials: true },
+    cors: { origin: allowedOrigins, credentials: true },
   });
 
   // Présence en ligne : userId -> nombre de sockets connectés.
