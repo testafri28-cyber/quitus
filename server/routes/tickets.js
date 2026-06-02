@@ -63,6 +63,8 @@ const ticketInclude = {
   department: { select: { id: true, name: true, code: true, companyId: true } },
   sourceCompany: { select: { id: true, name: true, slug: true, color: true } },
   feedback: true,
+  parent: { select: { id: true, reference: true, title: true, status: true } },
+  children: { select: { id: true, reference: true, title: true, status: true, type: true }, orderBy: { createdAt: "asc" } },
 };
 
 /* ---------------- GET /api/tickets ---------------- */
@@ -180,6 +182,7 @@ const createSchema = z.object({
   leaveEnd: z.string().optional(),
   leaveKind: z.string().optional(),
   attachmentUrl: z.string().optional(), // réutilisation d'un fichier déjà uploadé (ex. pièce jointe d'un message de salon)
+  parentId: z.string().optional(), // besoin créé pour débloquer un ticket en attente (lien de dépendance)
 });
 
 // Un service est-il accessible depuis l'espace ? (GLOBAL = tout ; sinon commun + entreprise de l'espace)
@@ -236,6 +239,14 @@ router.post("/", requireAuth, upload.single("attachment"), async (req, res, next
 
     // Nouveau fichier uploadé en priorité, sinon réutilisation d'un fichier existant (pièce jointe de salon).
     const attachmentUrl = req.file ? `/uploads/${req.file.filename}` : reusedAttachment;
+
+    // Lien de dépendance : le besoin doit pointer vers un ticket parent que l'émetteur peut voir.
+    let parentId = null;
+    if (parsed.data.parentId) {
+      const parent = await prisma.ticket.findUnique({ where: { id: parsed.data.parentId } });
+      if (parent && canSeeTicket(req.user, parent)) parentId = parent.id;
+    }
+
     const reference = await nextReference();
 
     const ticket = await prisma.ticket.create({
@@ -253,6 +264,7 @@ router.post("/", requireAuth, upload.single("attachment"), async (req, res, next
         submittedById: req.user.id,
         suggestedToId: suggested,
         attachmentUrl,
+        parentId,
         leaveStart: leaveStart ? new Date(leaveStart) : null,
         leaveEnd: leaveEnd ? new Date(leaveEnd) : null,
         leaveKind: leaveKind || null,

@@ -60,7 +60,7 @@ function Stats() {
       </div>
 
       <table className="data-table">
-        <thead><tr><th>Service</th><th>Entreprise</th><th>Total</th>{STATUS_ORDER.map((st) => <th key={st}>{STATUS_META[st].label}</th>)}<th>Délai moy. (h)</th></tr></thead>
+        <thead><tr><th>Service</th><th>Entreprise</th><th>Total</th>{STATUS_ORDER.map((st) => <th key={st}>{STATUS_META[st].label}</th>)}<th title="Hors temps passé en attente">Délai actif (h)</th></tr></thead>
         <tbody>
           {s.perDepartment.map((d) => (
             <tr key={d.id}>
@@ -98,7 +98,7 @@ function Performance() {
         </div>
       )}
       <table className="data-table">
-        <thead><tr><th>Membre</th><th>Service</th><th>Demandes</th><th>Pris en main</th><th>Interventions</th><th>Résolues</th><th>Délai moyen (h)</th></tr></thead>
+        <thead><tr><th>Membre</th><th>Service</th><th>Demandes</th><th>Pris en main</th><th>Interventions</th><th>Résolues</th><th title="Hors temps passé en attente">Délai actif (h)</th></tr></thead>
         <tbody>
           {sorted.map((r) => (
             <tr key={r.id}>
@@ -113,7 +113,7 @@ function Performance() {
           ))}
         </tbody>
       </table>
-      <p className="muted" style={{ fontSize: 12.5 }}>Le délai moyen mesure le temps entre la création d'une demande et sa résolution, pour les demandes prises en charge par le membre.</p>
+      <p className="muted" style={{ fontSize: 12.5 }}>Le délai actif mesure le temps entre la création d'une demande et sa résolution, <strong>hors temps passé « En attente »</strong> (ex. en attente d'un besoin lié) — pour les demandes prises en charge par le membre.</p>
       {hist && <UserHistoryModal user={hist} onClose={() => setHist(null)} />}
     </div>
   );

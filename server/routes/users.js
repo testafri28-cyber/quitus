@@ -4,6 +4,7 @@ import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "../middleware/auth.js";
 import { requireRole } from "../middleware/role.js";
+import { activeResolutionMs, groupEventsByTicket } from "../services/metrics.js";
 
 const router = Router();
 
@@ -64,7 +65,7 @@ router.get("/stats", requireAuth, requireRole("ADMIN"), async (_req, res, next) 
       prisma.ticket.groupBy({ by: ["assignedToId"], _count: { _all: true } }),
       prisma.ticket.findMany({
         where: { assignedToId: { not: null }, resolvedAt: { not: null } },
-        select: { assignedToId: true, createdAt: true, resolvedAt: true },
+        select: { id: true, assignedToId: true, createdAt: true, resolvedAt: true },
       }),
       // « Pris en main » : événements d'audit où le membre s'est assigné lui-même.
       prisma.ticketEvent.groupBy({
@@ -78,10 +79,17 @@ router.get("/stats", requireAuth, requireRole("ADMIN"), async (_req, res, next) 
     const asgMap = Object.fromEntries(byAssignee.filter((r) => r.assignedToId).map((r) => [r.assignedToId, r._count._all]));
     const takenMap = Object.fromEntries(byTaken.filter((r) => r.actorId).map((r) => [r.actorId, r._count._all]));
 
+    // Événements de statut des tickets résolus → temps « En attente » à exclure du délai.
+    const resolvedIds = resolved.map((r) => r.id);
+    const statusEvents = resolvedIds.length
+      ? await prisma.ticketEvent.findMany({ where: { action: "status", ticketId: { in: resolvedIds } }, select: { ticketId: true, detail: true, createdAt: true } })
+      : [];
+    const evByTicket = groupEventsByTicket(statusEvents);
+
     const perUser = users.map((u) => {
       const mine = resolved.filter((r) => r.assignedToId === u.id);
       const avgMs = mine.length
-        ? mine.reduce((s, t) => s + (t.resolvedAt.getTime() - t.createdAt.getTime()), 0) / mine.length
+        ? mine.reduce((s, t) => s + activeResolutionMs(t, evByTicket[t.id] || []), 0) / mine.length
         : null;
       return {
         id: u.id,

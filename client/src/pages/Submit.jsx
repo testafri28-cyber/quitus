@@ -48,6 +48,9 @@ export default function Submit() {
     const url = searchParams.get("attachmentUrl");
     return url ? { url, name: searchParams.get("attachmentName") || "fichier" } : null;
   });
+  // Besoin créé pour débloquer un ticket en attente (lien de dépendance).
+  const parentId = searchParams.get("parentId") || "";
+  const parentRef = searchParams.get("parentRef") || "";
   const [touched, setTouched] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -88,6 +91,7 @@ export default function Submit() {
       fd.append("description", desc.trim());
       if (file) fd.append("attachment", file);
       else if (carriedAttachment) fd.append("attachmentUrl", carriedAttachment.url); // réutilise la PJ du message
+      if (parentId) fd.append("parentId", parentId); // lien de dépendance vers le ticket en attente
       const { ticket } = await ticketsApi.create(fd);
       showToast("Demande soumise avec succès.", { to: `/${space}/tickets/${ticket.id}`, label: `Ouvrir ${ticket.reference}` });
       navigate(`/${space}/dashboard`);
@@ -107,6 +111,12 @@ export default function Submit() {
         </div>
 
         <div className="card card-pad">
+          {parentId && (
+            <div className="link-banner" style={{ marginBottom: 18 }}>
+              <Icon name="lock" />
+              <span>Ce besoin sera <strong>lié</strong> au ticket en attente{parentRef ? ` ${parentRef}` : ""} — le temps d'attente n'impactera pas son délai de résolution.</span>
+            </div>
+          )}
           {error && <div className="error-box" style={{ marginBottom: 18 }}>{error}</div>}
 
           <div className="field">

@@ -4,6 +4,7 @@ import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "../middleware/auth.js";
 import { requireRole } from "../middleware/role.js";
 import { CATEGORIES } from "../services/routing.js";
+import { activeResolutionMs, groupEventsByTicket } from "../services/metrics.js";
 
 const router = Router();
 
@@ -222,8 +223,14 @@ router.get("/stats", requireAuth, requireRole("ADMIN"), async (_req, res, next) 
     });
     const resolved = await prisma.ticket.findMany({
       where: { resolvedAt: { not: null } },
-      select: { createdAt: true, resolvedAt: true, departmentId: true },
+      select: { id: true, createdAt: true, resolvedAt: true, departmentId: true },
     });
+    // Temps « En attente » des tickets résolus → exclu du délai (délai actif).
+    const resolvedIds = resolved.map((r) => r.id);
+    const statusEvents = resolvedIds.length
+      ? await prisma.ticketEvent.findMany({ where: { action: "status", ticketId: { in: resolvedIds } }, select: { ticketId: true, detail: true, createdAt: true } })
+      : [];
+    const evByTicket = groupEventsByTicket(statusEvents);
     const feedbacks = await prisma.feedback.findMany({ select: { rating: true } });
     const total = await prisma.ticket.count();
 
@@ -233,7 +240,7 @@ router.get("/stats", requireAuth, requireRole("ADMIN"), async (_req, res, next) 
       const depResolved = resolved.filter((r) => r.departmentId === dep.id);
       const avgMs =
         depResolved.length > 0
-          ? depResolved.reduce((sum, t) => sum + (t.resolvedAt.getTime() - t.createdAt.getTime()), 0) /
+          ? depResolved.reduce((sum, t) => sum + activeResolutionMs(t, evByTicket[t.id] || []), 0) /
             depResolved.length
           : null;
       return {

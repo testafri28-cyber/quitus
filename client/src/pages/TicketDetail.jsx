@@ -25,6 +25,7 @@ export default function TicketDetail() {
   const [error, setError] = useState("");
   const [actionError, setActionError] = useState("");
   const [draft, setDraft] = useState("");
+  const [commentMode, setCommentMode] = useState("internal"); // 'internal' (note interne) | 'public' (message au demandeur)
   const [members, setMembers] = useState([]);
   const [transferTo, setTransferTo] = useState("");
   const [allDepts, setAllDepts] = useState([]);
@@ -76,10 +77,13 @@ export default function TicketDetail() {
 
   const takeTicket = () => run(() => ticketsApi.assign(ticket.id, { assignedToId: user.id }), "Vous avez pris la demande en main.");
   const advanceStatus = () => run(() => ticketsApi.setStatus(ticket.id, next), `Statut mis à jour : ${STATUS_META[next].label}.`);
+  const putOnHold = () => run(() => ticketsApi.setStatus(ticket.id, "ON_HOLD"), "Demande mise en attente — le demandeur peut compléter.");
 
+  // En interne par défaut ; un membre du service peut choisir d'écrire AU demandeur (commentaire public, notifié).
+  const isInternalComment = canAct && commentMode === "internal";
   const sendComment = () => {
     if (!draft.trim()) return;
-    run(() => ticketsApi.comment(ticket.id, draft.trim(), canAct), null).then(() => setDraft(""));
+    run(() => ticketsApi.comment(ticket.id, draft.trim(), isInternalComment), null).then(() => setDraft(""));
   };
 
   const uploadDoc = (file) => {
@@ -202,8 +206,25 @@ export default function TicketDetail() {
             {actionError && <div className="error-box" style={{ marginBottom: 16 }}>{actionError}</div>}
 
             <div className="card card-pad">
-              <div className="section-label">Commentaires {canAct ? "internes" : ""}</div>
-              {canAct && <div className="comment-note"><Icon name="lock" />Les commentaires internes ne sont pas transmis au demandeur.</div>}
+              <div className="section-label">Commentaires</div>
+              {canAct && (
+                <>
+                  <div className="seg comment-seg" style={{ marginBottom: 10 }}>
+                    <button type="button" className={commentMode === "internal" ? "sel" : ""} onClick={() => setCommentMode("internal")}>
+                      <Icon name="lock" style={{ width: 14, height: 14 }} />Note interne
+                    </button>
+                    <button type="button" className={commentMode === "public" ? "sel" : ""} onClick={() => setCommentMode("public")}>
+                      <Icon name="send" style={{ width: 14, height: 14 }} />Message au demandeur
+                    </button>
+                  </div>
+                  <div className="comment-note">
+                    <Icon name={isInternalComment ? "lock" : "user"} />
+                    {isInternalComment
+                      ? "Visible uniquement par votre service — non transmis au demandeur."
+                      : "Envoyé au demandeur, qui en sera notifié et pourra répondre."}
+                  </div>
+                </>
+              )}
               {(!ticket.comments || ticket.comments.length === 0) && <div className="muted" style={{ fontSize: 13.5, marginBottom: 14 }}>Aucun commentaire pour l'instant.</div>}
               {ticket.comments?.map((c) => (
                 <div className="comment" key={c.id}>
@@ -222,7 +243,7 @@ export default function TicketDetail() {
                 <Avatar name={user.name} />
                 <div className="cb-input">
                   <textarea className="textarea" style={{ minHeight: 70 }}
-                    placeholder={canAct ? "Ajouter un commentaire interne…" : "Ajouter un commentaire…"}
+                    placeholder={!canAct ? "Ajouter un commentaire…" : isInternalComment ? "Note interne au service…" : "Écrire au demandeur (question, complément attendu…)"}
                     value={draft} onChange={(e) => setDraft(e.target.value)} />
                 </div>
                 <button className="btn btn-primary" onClick={sendComment} disabled={!draft.trim()}><Icon name="send" /></button>
@@ -239,9 +260,16 @@ export default function TicketDetail() {
                     <Icon name="user" />Prendre la main
                   </button>
                 ) : canChangeStatus && next ? (
-                  <button className="btn btn-primary" style={{ width: "100%" }} onClick={advanceStatus}>
-                    <Icon name="check" />{NEXT_LABEL[ticket.status]}
-                  </button>
+                  <>
+                    <button className="btn btn-primary" style={{ width: "100%" }} onClick={advanceStatus}>
+                      <Icon name="check" />{NEXT_LABEL[ticket.status]}
+                    </button>
+                    {ticket.status === "IN_PROGRESS" && (
+                      <button className="btn btn-subtle" style={{ width: "100%", marginTop: 8 }} onClick={putOnHold}>
+                        <Icon name="clock" />Mettre en attente du demandeur
+                      </button>
+                    )}
+                  </>
                 ) : (
                   <div className="muted" style={{ fontSize: 13 }}>
                     {ticket.assignee ? `Pris en charge par ${ticket.assignee.name}.` : "Demande non assignée."}
@@ -254,6 +282,34 @@ export default function TicketDetail() {
                     ? <div className="row" style={{ gap: 8 }}><Avatar name={ticket.assignee.name} size={26} /><span style={{ fontSize: 13.5, fontWeight: 600 }}>{nameNode(ticket.assignee)}</span></div>
                     : <span className="badge">Non assigné</span>}
                 </div>
+                <div className="divider" />
+                <button className="btn btn-subtle" style={{ width: "100%" }}
+                  onClick={() => navigate(`/${space}/form?parentId=${ticket.id}&parentRef=${encodeURIComponent(ticket.reference)}`)}>
+                  <Icon name="plusCircle" />Créer un besoin lié
+                </button>
+                <div className="hint" style={{ marginTop: 6 }}>Pour un complément bloquant : son temps d'attente n'impactera pas le délai de ce ticket.</div>
+              </div>
+            )}
+
+            {(ticket.parent || ticket.children?.length > 0) && (
+              <div className="card card-pad" style={{ marginBottom: 20 }}>
+                <div className="section-label">Dépendances</div>
+                {ticket.parent && (
+                  <div className="dep-row">
+                    <span className="dep-tag">débloque</span>
+                    <button className="link-mono" onClick={() => navigate(`/${space}/tickets/${ticket.parent.id}`)}>{ticket.parent.reference}</button>
+                    <span className="dep-title">{ticket.parent.title}</span>
+                    <StatusChip status={ticket.parent.status} />
+                  </div>
+                )}
+                {ticket.children?.map((c) => (
+                  <div className="dep-row" key={c.id}>
+                    <span className="dep-tag">besoin lié</span>
+                    <button className="link-mono" onClick={() => navigate(`/${space}/tickets/${c.id}`)}>{c.reference}</button>
+                    <span className="dep-title">{c.title}</span>
+                    <StatusChip status={c.status} />
+                  </div>
+                ))}
               </div>
             )}
 
