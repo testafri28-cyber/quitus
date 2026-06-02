@@ -43,6 +43,11 @@ export default function Submit() {
   const [urgency, setUrgency] = useState("NORMAL");
   const [desc, setDesc] = useState(searchParams.get("description") || "");
   const [file, setFile] = useState(null);
+  // Pièce jointe reportée depuis un message de salon (déjà uploadée → on réutilise son URL).
+  const [carriedAttachment, setCarriedAttachment] = useState(() => {
+    const url = searchParams.get("attachmentUrl");
+    return url ? { url, name: searchParams.get("attachmentName") || "fichier" } : null;
+  });
   const [touched, setTouched] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -82,6 +87,7 @@ export default function Submit() {
       if (suggested) fd.append("suggestedToId", suggested);
       fd.append("description", desc.trim());
       if (file) fd.append("attachment", file);
+      else if (carriedAttachment) fd.append("attachmentUrl", carriedAttachment.url); // réutilise la PJ du message
       const { ticket } = await ticketsApi.create(fd);
       showToast("Demande soumise avec succès.", { to: `/${space}/tickets/${ticket.id}`, label: `Ouvrir ${ticket.reference}` });
       navigate(`/${space}/dashboard`);
@@ -170,6 +176,15 @@ export default function Submit() {
                   <div className="fc-size mono">{(file.size / 1024).toFixed(0)} Ko</div>
                 </span>
                 <button className="icon-btn" onClick={() => setFile(null)} title="Retirer"><Icon name="x" /></button>
+              </div>
+            ) : carriedAttachment ? (
+              <div className="file-chip">
+                <span className="fc-ico"><Icon name="file" /></span>
+                <span style={{ flex: 1 }}>
+                  <div className="fc-name">{carriedAttachment.name}</div>
+                  <div className="fc-size mono">Pièce jointe reportée du salon</div>
+                </span>
+                <button className="icon-btn" onClick={() => setCarriedAttachment(null)} title="Retirer"><Icon name="x" /></button>
               </div>
             ) : (
               <label className="dropzone">

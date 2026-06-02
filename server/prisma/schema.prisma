@@ -40,6 +40,14 @@ enum TicketStatus {
   CLOSED
 }
 
+// Disponibilité déclarée par l'utilisateur. « En ligne / Pas en ligne » est dérivé des connexions socket ;
+// AVAILABLE laisse donc parler la présence réelle, UNAVAILABLE/ON_LEAVE priment sur l'état en ligne.
+enum Presence {
+  AVAILABLE   // disponible (l'état affiché suit la connexion : en ligne / pas en ligne)
+  UNAVAILABLE // indisponible
+  ON_LEAVE    // en congé
+}
+
 model Company {
   id    String @id @default(cuid())
   name  String // "WCA" | "IDC"
@@ -91,6 +99,9 @@ model User {
   notifyEmail Boolean @default(true) @map("notify_email")
   notifyPush  Boolean @default(true) @map("notify_push")
 
+  // Disponibilité déclarée (présence en ligne/hors-ligne calculée côté socket)
+  presence Presence @default(AVAILABLE)
+
   submittedTickets  Ticket[]         @relation("TicketSubmitter")
   assignedTickets   Ticket[]         @relation("TicketAssignee")
   suggestedTickets  Ticket[]         @relation("TicketSuggested")
@@ -102,6 +113,7 @@ model User {
   pushSubscriptions PushSubscription[]
   managedDepartments Department[]    @relation("DeptResponsible")
   chatMessages       ChatMessage[]
+  chatReads          ChatRead[]
 
   @@index([role])
   @@index([companyId])
@@ -227,7 +239,9 @@ model ChatRoom {
   archived     Boolean     @default(false)
   createdAt    DateTime    @default(now()) @map("created_at")
 
-  messages ChatMessage[]
+  messages      ChatMessage[]
+  notifications Notification[]
+  reads         ChatRead[]
 
   @@map("chat_rooms")
 }
@@ -239,10 +253,25 @@ model ChatMessage {
   authorId  String   @map("author_id")
   author    User     @relation(fields: [authorId], references: [id])
   content   String
+  attachmentUrl  String? @map("attachment_url")
+  attachmentName String? @map("attachment_name")
   createdAt DateTime @default(now()) @map("created_at")
 
   @@index([roomId])
   @@map("chat_messages")
+}
+
+// Marqueur de dernière lecture d'un salon par un utilisateur → compteur de messages non lus.
+model ChatRead {
+  id         String   @id @default(cuid())
+  userId     String   @map("user_id")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roomId     String   @map("room_id")
+  room       ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  lastReadAt DateTime @default(now()) @map("last_read_at")
+
+  @@unique([userId, roomId])
+  @@map("chat_reads")
 }
 
 model PushSubscription {
@@ -269,10 +298,12 @@ model Notification {
   id        String   @id @default(cuid())
   userId    String   @map("user_id")
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type      String // new_ticket | suggested | assigned | status | comment | transfer_proposed | transfer_accepted | transfer_refused
+  type      String // new_ticket | suggested | assigned | status | comment | transfer_* | chat
   text      String
   ticketId  String?  @map("ticket_id")
   ticket    Ticket?  @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  roomId    String?  @map("room_id")
+  room      ChatRoom? @relation(fields: [roomId], references: [id], onDelete: Cascade)
   read      Boolean  @default(false)
   createdAt DateTime @default(now()) @map("created_at")
 

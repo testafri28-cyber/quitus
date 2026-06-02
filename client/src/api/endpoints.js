@@ -56,6 +56,9 @@ export const chatApi = {
   patchRoom: (id, payload) => api.patch(`/chat/rooms/${id}`, payload),
   deleteRoom: (id) => api.del(`/chat/rooms/${id}`),
   messages: (id) => api.get(`/chat/rooms/${id}/messages`),
+  unread: () => api.get("/chat/unread"),
+  markRoomRead: (id) => api.post(`/chat/rooms/${id}/read`),
+  upload: (formData) => api.postForm("/chat/upload", formData),
 };
 
 export const settingsApi = {
@@ -85,6 +88,7 @@ export const usersApi = {
     return api.get(`/users${qs ? `?${qs}` : ""}`);
   },
   stats: () => api.get("/users/stats"),
+  presence: () => api.get("/users/presence"),
   create: (payload) => api.post("/users", payload),
   update: (id, payload) => api.patch(`/users/${id}`, payload),
   remove: (id) => api.del(`/users/${id}`),

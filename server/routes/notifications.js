@@ -31,14 +31,16 @@ router.patch("/preferences", requireAuth, async (req, res, next) => {
 // GET /api/notifications — notifications de l'utilisateur courant + nombre de non-lus
 router.get("/", requireAuth, async (req, res, next) => {
   try {
+    // Les messages de salon ne passent PAS par la cloche : ils sont signalés dans la barre latérale (badge « Discussion »).
+    const where = { userId: req.user.id, type: { not: "chat" } };
     const [notifications, unread] = await Promise.all([
       prisma.notification.findMany({
-        where: { userId: req.user.id },
+        where,
         orderBy: { createdAt: "desc" },
         take: 30,
         include: { ticket: { select: { id: true, reference: true } } },
       }),
-      prisma.notification.count({ where: { userId: req.user.id, read: false } }),
+      prisma.notification.count({ where: { ...where, read: false } }),
     ]);
     res.json({ notifications, unread });
   } catch (err) {

@@ -1,5 +1,8 @@
 import { Router } from "express";
 import { z } from "zod";
+import multer from "multer";
+import crypto from "crypto";
+import path from "path";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "../middleware/auth.js";
 import { canAccessRoom, canManageRoom } from "../services/chat.js";
@@ -7,6 +10,20 @@ import { canAccessRoom, canManageRoom } from "../services/chat.js";
 const router = Router();
 
 const roomInclude = { department: { select: { id: true, name: true, responsibleId: true } } };
+
+// Upload de pièce jointe (mêmes règles que les tickets : stockage local, 10 Mo max).
+const uploadDir = process.env.UPLOAD_DIR || "uploads";
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, uploadDir),
+  filename: (_req, file, cb) => cb(null, `${crypto.randomUUID()}${path.extname(file.originalname)}`),
+});
+const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
+
+// POST /api/chat/upload — dépose un fichier et renvoie son URL (à joindre ensuite via chat:send)
+router.post("/upload", requireAuth, upload.single("file"), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: "Aucun fichier reçu." });
+  res.status(201).json({ url: `/uploads/${req.file.filename}`, name: req.file.originalname });
+});
 
 // GET /api/chat/rooms — salons accessibles + droits
 router.get("/rooms", requireAuth, async (req, res, next) => {
@@ -36,13 +53,77 @@ router.get("/rooms", requireAuth, async (req, res, next) => {
   }
 });
 
-// POST /api/chat/rooms — créer le salon d'un service (responsable du service ou admin)
-const createSchema = z.object({ name: z.string().optional(), departmentId: z.string().optional() });
+// GET /api/chat/unread — nombre de messages non lus par salon accessible (pour le badge « Discussion »)
+router.get("/unread", requireAuth, async (req, res, next) => {
+  try {
+    const all = await prisma.chatRoom.findMany({ include: roomInclude });
+    const rooms = all.filter((r) => !r.archived && canAccessRoom(req.user, r));
+    if (!rooms.length) return res.json({ counts: {}, total: 0 });
+
+    const reads = await prisma.chatRead.findMany({
+      where: { userId: req.user.id, roomId: { in: rooms.map((r) => r.id) } },
+      select: { roomId: true, lastReadAt: true },
+    });
+    const readMap = Object.fromEntries(reads.map((r) => [r.roomId, r.lastReadAt]));
+    const me = await prisma.user.findUnique({ where: { id: req.user.id }, select: { createdAt: true } });
+    const baseline = me?.createdAt || new Date(0);
+
+    const counts = {};
+    let total = 0;
+    for (const r of rooms) {
+      const since = readMap[r.id] || baseline;
+      const n = await prisma.chatMessage.count({
+        where: { roomId: r.id, authorId: { not: req.user.id }, createdAt: { gt: since } },
+      });
+      if (n > 0) { counts[r.id] = n; total += n; }
+    }
+    res.json({ counts, total });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/chat/rooms/:id/read — marquer un salon comme lu (avance le marqueur de lecture)
+router.post("/rooms/:id/read", requireAuth, async (req, res, next) => {
+  try {
+    const room = await prisma.chatRoom.findUnique({ where: { id: req.params.id }, include: roomInclude });
+    if (!room) return res.status(404).json({ error: "Salon introuvable." });
+    if (!canAccessRoom(req.user, room)) return res.status(403).json({ error: "Accès refusé à ce salon." });
+    await prisma.chatRead.upsert({
+      where: { userId_roomId: { userId: req.user.id, roomId: room.id } },
+      update: { lastReadAt: new Date() },
+      create: { userId: req.user.id, roomId: room.id },
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/chat/rooms — créer un salon
+//  - canal global : admin uniquement (scope:"GLOBAL", name requis)
+//  - salon de service : responsable du service (le sien) ou admin (n'importe quel service)
+const createSchema = z.object({
+  name: z.string().optional(),
+  departmentId: z.string().optional(),
+  scope: z.enum(["GLOBAL", "DEPARTMENT"]).optional(),
+});
 router.post("/rooms", requireAuth, async (req, res, next) => {
   try {
     const parsed = createSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: "Paramètres invalides." });
     const isAdmin = req.user.role === "ADMIN";
+
+    // Canal global (admin seulement)
+    if (parsed.data.scope === "GLOBAL") {
+      if (!isAdmin) return res.status(403).json({ error: "Réservé à l'administrateur." });
+      const name = parsed.data.name?.trim();
+      if (!name) return res.status(400).json({ error: "Nom du canal requis." });
+      const room = await prisma.chatRoom.create({ data: { name, scope: "GLOBAL" } });
+      return res.status(201).json({ room });
+    }
+
+    // Salon de service
     const departmentId = isAdmin ? parsed.data.departmentId : req.user.departmentId;
     if (!departmentId) return res.status(400).json({ error: "Service introuvable." });
 
@@ -83,8 +164,8 @@ router.delete("/rooms/:id", requireAuth, async (req, res, next) => {
   try {
     const room = await prisma.chatRoom.findUnique({ where: { id: req.params.id }, include: roomInclude });
     if (!room) return res.status(404).json({ error: "Salon introuvable." });
-    if (room.scope === "GLOBAL") return res.status(400).json({ error: "Le salon général ne peut pas être supprimé." });
-    if (!canManageRoom(req.user, room)) return res.status(403).json({ error: "Réservé au responsable du service." });
+    // Un canal global n'est gérable que par l'admin (canManageRoom le garantit) ; un salon de service par son responsable ou l'admin.
+    if (!canManageRoom(req.user, room)) return res.status(403).json({ error: "Réservé au responsable du service ou à l'administrateur." });
     await prisma.chatRoom.delete({ where: { id: room.id } }); // messages supprimés en cascade
     res.status(204).end();
   } catch (err) {

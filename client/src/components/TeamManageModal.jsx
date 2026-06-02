@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Icon } from "./Icon.jsx";
 import { Avatar } from "./Badges.jsx";
 import { departmentsApi } from "../api/endpoints.js";
+import { usePresence } from "../context/PresenceContext.jsx";
+import { PRESENCE_STATE_META } from "../lib/design.js";
 
 // Gestion des membres d'un service — réservé au responsable (ou admin).
 // Ajoute / retire des membres ; le serveur applique les droits.
@@ -11,6 +13,7 @@ export function TeamManageModal({ departmentId, deptName, onClose, onChanged }) 
   const [pick, setPick] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const { presenceState } = usePresence();
 
   const load = () => {
     Promise.all([departmentsApi.members(departmentId), departmentsApi.candidates(departmentId)])
@@ -68,7 +71,11 @@ export function TeamManageModal({ departmentId, deptName, onClose, onChanged }) 
                     <div className="row" style={{ gap: 10 }}>
                       <Avatar name={m.name} size={30} />
                       <div>
-                        <div style={{ fontWeight: 600, fontSize: 13.5 }}>{m.name}</div>
+                        <div className="row" style={{ gap: 6 }}>
+                          <span className="pres-dot" style={{ background: PRESENCE_STATE_META[presenceState(m.id)].color }} />
+                          <span style={{ fontWeight: 600, fontSize: 13.5 }}>{m.name}</span>
+                          <span className="muted" style={{ fontSize: 11.5 }}>· {PRESENCE_STATE_META[presenceState(m.id)].label}</span>
+                        </div>
                         {m.email && <div className="muted" style={{ fontSize: 12 }}>{m.email}</div>}
                       </div>
                     </div>

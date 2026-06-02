@@ -179,6 +179,7 @@ const createSchema = z.object({
   leaveStart: z.string().optional(),
   leaveEnd: z.string().optional(),
   leaveKind: z.string().optional(),
+  attachmentUrl: z.string().optional(), // réutilisation d'un fichier déjà uploadé (ex. pièce jointe d'un message de salon)
 });
 
 // Un service est-il accessible depuis l'espace ? (GLOBAL = tout ; sinon commun + entreprise de l'espace)
@@ -195,6 +196,7 @@ router.post("/", requireAuth, upload.single("attachment"), async (req, res, next
       return res.status(400).json({ error: parsed.error.issues[0].message });
     }
     const { title, description, category, departmentId, suggestedToId, type, urgency, space, leaveStart, leaveEnd, leaveKind } = parsed.data;
+    const reusedAttachment = parsed.data.attachmentUrl && parsed.data.attachmentUrl.startsWith("/uploads/") ? parsed.data.attachmentUrl : null;
 
     // Contrôle d'accès par espace : un employé WCA ne peut pas soumettre via l'espace IDC.
     if (!userCanUseSpace(req.user, space)) {
@@ -232,7 +234,8 @@ router.post("/", requireAuth, upload.single("attachment"), async (req, res, next
       suggested = m.id;
     }
 
-    const attachmentUrl = req.file ? `/uploads/${req.file.filename}` : null;
+    // Nouveau fichier uploadé en priorité, sinon réutilisation d'un fichier existant (pièce jointe de salon).
+    const attachmentUrl = req.file ? `/uploads/${req.file.filename}` : reusedAttachment;
     const reference = await nextReference();
 
     const ticket = await prisma.ticket.create({

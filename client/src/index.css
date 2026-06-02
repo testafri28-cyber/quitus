@@ -592,7 +592,24 @@ a { color: inherit; }
 .chat-room:hover { background: var(--surface-2); color: var(--text); }
 .chat-room.active { background: var(--accent-soft); color: var(--accent-text); font-weight: 600; }
 .chat-room.active svg { color: var(--accent); }
-.chat-room .cr-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13.5px; }
+.chat-room .cr-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13.5px; flex: 1; }
+.chat-room .cr-badge {
+  margin-left: auto; flex-shrink: 0;
+  min-width: 18px; height: 18px; padding: 0 5px;
+  border-radius: 9px; background: var(--accent); color: var(--accent-ink);
+  font-size: 11px; font-weight: 700; line-height: 18px; text-align: center;
+}
+
+/* statut de disponibilité de l'utilisateur courant (haut de la colonne salons) */
+.chat-me { display: flex; align-items: center; gap: 8px; padding: 4px 6px 10px; border-bottom: 1px solid var(--border); margin-bottom: 6px; }
+.pres-select {
+  flex: 1; padding: 5px 8px; border: 1px solid var(--border-strong); border-radius: 8px;
+  background: var(--surface); color: var(--text); font-size: 12.5px; outline: none; cursor: pointer;
+}
+.pres-select:focus { border-color: var(--accent); }
+
+/* pastille de présence */
+.pres-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; box-shadow: 0 0 0 2px var(--surface); }
 .chat-room.create { margin-top: 4px; border-top: 1px dashed var(--border); border-radius: 0 0 var(--radius-sm) var(--radius-sm); color: var(--accent); padding-top: 12px; }
 .chat-room.create svg { color: var(--accent); }
 
@@ -673,14 +690,66 @@ a { color: inherit; }
 .cm-actions button svg { width: 13px; height: 13px; }
 .cm-actions button:hover { color: var(--accent); background: var(--surface-2); }
 
+/* mention dans une bulle */
+.mention { color: var(--accent-text); background: var(--accent-soft); border-radius: 4px; padding: 0 3px; font-weight: 600; }
+.chat-msg.mine .cm-bubble .mention { background: rgba(255,255,255,.45); color: var(--accent-text); }
+
+/* pièce jointe dans un message */
+.cm-attach {
+  display: inline-flex; align-items: center; gap: 9px;
+  margin-top: 5px; max-width: 280px;
+  padding: 8px 11px; border: 1px solid var(--border); border-radius: 10px;
+  background: var(--surface); color: var(--text); text-decoration: none;
+}
+.cm-attach:hover { border-color: var(--accent); background: var(--accent-soft); }
+.cm-attach .ca-ico { width: 30px; height: 30px; flex-shrink: 0; display: grid; place-items: center; border-radius: 7px; background: var(--surface-2); color: var(--text-2); }
+.cm-attach .ca-name { flex: 1; font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cm-attach .ca-dl { color: var(--text-3); display: grid; place-items: center; }
+.cm-attach .ca-dl svg, .cm-attach .ca-ico svg { width: 16px; height: 16px; }
+.chat-msg.mine .cm-attach { margin-left: auto; }
+
+/* composer : enveloppe (chip de PJ en attente au-dessus) + bouton trombone */
+.chat-composer-wrap { border-top: 1px solid var(--border); }
+.chat-composer-wrap .chat-composer { border-top: none; }
+.chat-attach-pending {
+  display: flex; align-items: center; gap: 8px;
+  margin: 10px 16px 0; padding: 7px 11px;
+  border: 1px solid var(--border); border-radius: 9px; background: var(--surface-2);
+  font-size: 13px;
+}
+.chat-attach-pending .ca-ico { display: grid; place-items: center; color: var(--text-2); }
+.chat-attach-pending .ca-ico svg { width: 16px; height: 16px; }
+.chat-attach-pending .ca-name { flex: 1; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ca-btn { flex-shrink: 0; }
+
 /* composer */
 .chat-composer {
+  position: relative;
   display: flex;
   gap: 10px;
   padding: 12px 16px;
   border-top: 1px solid var(--border);
   flex-shrink: 0;
 }
+
+/* menu d'autocomplétion des mentions */
+.mention-menu {
+  position: absolute;
+  left: 16px; bottom: calc(100% - 6px);
+  width: 260px; max-height: 230px; overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-lg);
+  padding: 5px;
+  z-index: 30;
+}
+.mention-item {
+  display: flex; align-items: center; gap: 9px;
+  width: 100%; padding: 7px 9px; border-radius: 7px;
+  text-align: left; font-size: 13.5px; color: var(--text); border: none; background: transparent; cursor: pointer;
+}
+.mention-item:hover, .mention-item.first { background: var(--accent-soft); color: var(--accent-text); }
 .chat-composer input {
   flex: 1;
   padding: 10px 14px;

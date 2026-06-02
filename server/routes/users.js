@@ -21,6 +21,17 @@ const userSelect = {
   department: { select: { id: true, name: true, code: true } },
 };
 
+// GET /api/users/presence — disponibilité déclarée de tous les utilisateurs (tout authentifié).
+// L'état « en ligne / pas en ligne » est calculé côté client à partir des événements socket.
+router.get("/presence", requireAuth, async (_req, res, next) => {
+  try {
+    const users = await prisma.user.findMany({ select: { id: true, name: true, presence: true } });
+    res.json({ presences: users });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // GET /api/users — admin: tous (filtrable) ; agent: agents de SON service.
 router.get("/", requireAuth, async (req, res, next) => {
   try {

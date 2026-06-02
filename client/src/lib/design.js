@@ -150,3 +150,18 @@ export function formatDate(iso) {
   const mois = ["janv", "févr", "mars", "avr", "mai", "juin", "juil", "août", "sept", "oct", "nov", "déc"];
   return `${d.getDate()} ${mois[d.getMonth()]} · ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
+
+// Présence / disponibilité. États dérivés : online/offline (socket) + unavailable/leave (déclaré).
+export const PRESENCE_STATE_META = {
+  online:      { label: "En ligne",     color: "#4f9d77" },
+  offline:     { label: "Pas en ligne", color: "#97a1b0" },
+  unavailable: { label: "Indisponible", color: "#c66150" },
+  leave:       { label: "En congé",     color: "#c9933a" },
+};
+
+// Choix proposés à l'utilisateur pour déclarer sa disponibilité.
+export const PRESENCE_OPTIONS = [
+  { value: "AVAILABLE",   label: "Disponible" },
+  { value: "UNAVAILABLE", label: "Indisponible" },
+  { value: "ON_LEAVE",    label: "En congé" },
+];

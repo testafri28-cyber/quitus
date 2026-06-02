@@ -15,6 +15,8 @@ const NOTIF_ICON = {
   transfer_proposed: "send",
   transfer_accepted: "check",
   transfer_refused: "x",
+  chat: "message",
+  mention: "user",
 };
 
 function relTime(iso) {
@@ -47,6 +49,7 @@ export function Topbar({ space, crumbs }) {
     if (!n.read) markRead(n.id);
     setOpen(false);
     if (n.ticketId) navigate(`/${space}/tickets/${n.ticketId}`);
+    else if (n.roomId) navigate(`/${space}/chat?room=${n.roomId}`);
   };
 
   return (
@@ -82,7 +85,7 @@ export function Topbar({ space, crumbs }) {
                     <span className="ni-ico"><Icon name={NOTIF_ICON[n.type] || "bell"} /></span>
                     <span className="ni-body">
                       <span className="ni-text">{n.text}</span>
-                      <span className="ni-time">{n.ticket ? `${n.ticket.reference} · ` : ""}{relTime(n.createdAt)}</span>
+                      <span className="ni-time">{n.ticket ? `${n.ticket.reference} · ` : n.room ? `${n.room.name} · ` : ""}{relTime(n.createdAt)}</span>
                     </span>
                     {!n.read && <span className="ni-unread" />}
                   </button>
