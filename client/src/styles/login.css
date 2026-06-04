@@ -1,30 +1,60 @@
 /* ============================================================
-   Page de connexion — harmonisée avec le design system Quitus.
-   Gauche : formulaire. Droite : slider d'étapes (illustrations flat).
-   Réutilise les variables globales (:root). Scopé .login-split.
+   Page de connexion — une seule colonne centrée.
+   Étapes (illustration flat + texte) en haut, formulaire dessous.
+   Harmonisée avec le design system Quitus (tokens :root). Scopé .login-single.
    ============================================================ */
-.login-split {
+.login-single {
   font-family: "Hanken Grotesk", "Helvetica Neue", Helvetica, Arial, sans-serif;
-  display: flex; min-height: 100vh; background: var(--bg); color: var(--text);
+  min-height: 100vh; color: var(--text);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 16px; padding: 32px 18px; position: relative; overflow: hidden;
+  background:
+    radial-gradient(120% 80% at 50% 0%, color-mix(in srgb, var(--accent) 20%, transparent), transparent 60%),
+    linear-gradient(165deg, color-mix(in srgb, var(--accent) 6%, var(--bg)) 0%, color-mix(in srgb, var(--accent) 15%, var(--bg)) 100%);
 }
-.login-split *, .login-split *::before, .login-split *::after { box-sizing: border-box; }
+.login-single *, .login-single *::before, .login-single *::after { box-sizing: border-box; }
 
-/* --- GAUCHE : formulaire --- */
-.lg-left { width: 60%; min-width: 340px; background: var(--bg); display: flex; flex-direction: column; align-items: center; padding: 36px 56px; }
-/* Contenu aligné dans une colonne centrée (lisible même sur un large panneau). */
-.lg-logo, .lg-form, .lg-foot { width: 100%; max-width: 420px; }
+/* formes flottantes (ambiance, derrière la carte) */
+.lg-shape { position: absolute; z-index: 0; pointer-events: none; }
+.lg-s-diamond { top: 12%; right: 14%; animation: lgFloat 7s ease-in-out infinite, lgUp .6s ease-out .4s both; }
+.lg-s-diamond > div { width: 30px; height: 30px; background: var(--accent); border-radius: 7px; transform: rotate(45deg); box-shadow: var(--shadow-md); opacity: .85; }
+.lg-s-ring { bottom: 14%; left: 13%; animation: lgFloat 9s ease-in-out infinite 1.2s, lgUp .6s ease-out .5s both; }
+.lg-s-ring > div { width: 46px; height: 46px; border-radius: 50%; border: 6px solid color-mix(in srgb, var(--accent) 45%, white); }
 
-.lg-logo { display: flex; align-items: center; gap: 9px; animation: lgUp .5s ease-out both; }
+/* carte centrale */
+.lg-card {
+  position: relative; z-index: 1;
+  width: 100%; max-width: 430px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); box-shadow: var(--shadow-lg);
+  padding: 28px 30px 26px;
+  animation: lgUp .5s ease-out both;
+}
+
+.lg-logo { display: flex; align-items: center; gap: 9px; justify-content: center; }
 .lg-logo-badge { width: 32px; height: 32px; border-radius: 9px; background: var(--accent); display: flex; align-items: center; justify-content: center; color: var(--accent-ink); box-shadow: var(--shadow-sm); }
 .lg-logo-name { font-size: 15px; font-weight: 700; letter-spacing: -.01em; }
 
-.lg-form { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 24px 0; }
-.lg-title { font-size: 26px; font-weight: 700; letter-spacing: -.02em; margin: 0 0 5px; animation: lgUp .5s ease-out .07s both; }
-.lg-sub { font-size: 14px; color: var(--text-2); margin: 0 0 28px; line-height: 1.5; animation: lgUp .5s ease-out .11s both; }
+/* étapes */
+.lg-steps { text-align: center; margin-top: 16px; }
+.lg-illu { position: relative; width: 100%; height: 152px; margin: 0 0 12px; }
+.lg-illu-slide { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; opacity: 0; transform: scale(.97); transition: opacity .5s ease, transform .5s ease; pointer-events: none; }
+.lg-illu-slide.active { opacity: 1; transform: scale(1); }
+.lg-illu-pulse { transform-box: fill-box; transform-origin: center; animation: lgPulse 2s ease-in-out infinite; }
+.lg-rtitle { font-size: 19px; font-weight: 700; color: var(--text); line-height: 1.25; letter-spacing: -.01em; margin: 0 0 7px; }
+.lg-rsub { font-size: 13px; color: var(--text-2); line-height: 1.55; margin: 0 auto 14px; max-width: 320px; }
+.lg-dots { display: flex; gap: 6px; justify-content: center; }
+.lg-dot { height: 7px; width: 7px; border-radius: 99px; background: color-mix(in srgb, var(--accent) 25%, white); border: none; padding: 0; cursor: pointer; transition: all .35s ease; }
+.lg-dot.active { width: 22px; background: var(--accent); }
 
-.lg-error { animation: lgUp .35s ease-out both; margin-bottom: 16px; }
+.lg-divider { height: 1px; background: var(--border); margin: 22px 0 18px; }
 
-.lg-field { margin-bottom: 13px; animation: lgUp .5s ease-out .16s both; }
+/* formulaire */
+.lg-form { display: flex; flex-direction: column; }
+.lg-formlabel { font-size: 12.5px; font-weight: 600; color: var(--text-2); text-align: center; margin: 0 0 14px; }
+.lg-error { margin-bottom: 14px; }
+
+.lg-field { margin-bottom: 12px; }
 .lg-input-wrap { position: relative; }
 .lg-field input {
   width: 100%; padding: 12px 16px; background: var(--surface);
@@ -41,7 +71,7 @@
 .lg-eye:hover { color: var(--text-2); }
 .lg-hint { font-size: 12px; color: var(--u-urgente); margin-top: 6px; }
 
-.lg-forgot-row { text-align: right; margin: -2px 0 22px; animation: lgUp .5s ease-out .26s both; }
+.lg-forgot-row { text-align: right; margin: 2px 0 20px; }
 .lg-forgot { font-size: 12.5px; color: var(--text-2); cursor: default; }
 .lg-forgot:hover { color: var(--text); }
 
@@ -50,63 +80,19 @@
   border: none; border-radius: var(--radius-sm); font: inherit;
   font-size: 15px; font-weight: 600; letter-spacing: .01em; cursor: pointer;
   display: inline-flex; align-items: center; justify-content: center; gap: 9px;
-  box-shadow: var(--shadow-sm);
-  transition: background .15s, transform .05s, box-shadow .15s; animation: lgUp .5s ease-out .31s both;
+  box-shadow: var(--shadow-sm); transition: background .15s, transform .05s, box-shadow .15s;
 }
 .lg-btn:hover:not(:disabled) { background: var(--accent-hover); box-shadow: var(--shadow-md); }
 .lg-btn:active:not(:disabled) { transform: translateY(.5px); }
 .lg-btn:disabled { opacity: .7; cursor: progress; }
 .lg-spinner { width: 16px; height: 16px; border-radius: 50%; border: 2.5px solid rgba(255,255,255,.35); border-top-color: var(--accent-ink); animation: lgSpin .7s linear infinite; }
 
-.lg-note { margin-top: 14px; font-size: 12px; color: var(--text-3); text-align: center; line-height: 1.55; animation: lgUp .5s ease-out .36s both; }
+.lg-note { margin: 13px 0 0; font-size: 12px; color: var(--text-3); text-align: center; line-height: 1.55; }
 
-.lg-foot { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; color: var(--text-3); animation: lgUp .5s ease-out .4s both; }
+/* pied de page sous la carte */
+.lg-foot { position: relative; z-index: 1; display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; font-size: 12px; color: var(--text-3); animation: lgUp .5s ease-out .15s both; }
 .lg-foot-link { color: var(--text-2); font-weight: 500; cursor: pointer; }
 .lg-foot-link:hover { color: var(--text); }
-
-/* --- DROITE : panneau accent (clair, teinté violet) --- */
-.lg-right {
-  flex: 1; position: relative; overflow: hidden;
-  border-left: 1px solid var(--border);
-  background:
-    radial-gradient(130% 120% at 50% 6%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 60%),
-    linear-gradient(165deg, color-mix(in srgb, var(--accent) 7%, var(--surface)) 0%, color-mix(in srgb, var(--accent) 17%, var(--surface)) 100%);
-  display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
-  padding: 0 48px 48px;
-}
-.lg-glow { position: absolute; top: 6%; left: 50%; transform: translateX(-50%); width: 360px; height: 360px; border-radius: 50%; background: radial-gradient(circle, color-mix(in srgb, var(--accent) 22%, transparent) 0%, transparent 65%); pointer-events: none; }
-
-/* formes flottantes (ambiance, teintes accent) */
-.lg-shape { position: absolute; z-index: 2; pointer-events: none; }
-.lg-s-diamond { top: 9%; right: 9%; animation: lgFloat 7s ease-in-out infinite, lgUp .6s ease-out .5s both; }
-.lg-s-diamond > div { width: 30px; height: 30px; background: var(--accent); border-radius: 7px; transform: rotate(45deg); box-shadow: var(--shadow-md); opacity: .9; }
-.lg-s-ring { bottom: 30%; left: 9%; animation: lgFloat 9s ease-in-out infinite 1.2s, lgUp .6s ease-out .6s both; }
-.lg-s-ring > div { width: 46px; height: 46px; border-radius: 50%; border: 6px solid color-mix(in srgb, var(--accent) 50%, white); }
-
-/* zone d'illustration flat (étape active) */
-.lg-illu {
-  position: absolute; top: 11%; left: 50%; transform: translateX(-50%);
-  width: 320px; height: 215px; z-index: 3;
-  animation: lgUp .6s ease-out .28s both;
-  filter: drop-shadow(0 18px 36px color-mix(in srgb, var(--accent) 16%, transparent));
-}
-.lg-illu-slide {
-  position: absolute; inset: 0;
-  display: flex; align-items: center; justify-content: center;
-  opacity: 0; transform: scale(.97);
-  transition: opacity .5s ease, transform .5s ease;
-  pointer-events: none;
-}
-.lg-illu-slide.active { opacity: 1; transform: scale(1); }
-.lg-illu-pulse { transform-box: fill-box; transform-origin: center; animation: lgPulse 2s ease-in-out infinite; }
-
-/* texte de l'étape + dots */
-.lg-rfoot { position: relative; z-index: 4; text-align: center; max-width: 340px; animation: lgUp .6s ease-out .42s both; }
-.lg-rtitle { font-size: 23px; font-weight: 700; color: var(--text); line-height: 1.22; letter-spacing: -.02em; margin: 0 0 9px; }
-.lg-rsub { font-size: 13.5px; color: var(--text-2); line-height: 1.6; margin: 0 auto 22px; max-width: 320px; }
-.lg-dots { display: flex; gap: 6px; justify-content: center; }
-.lg-dot { height: 8px; width: 8px; border-radius: 99px; background: color-mix(in srgb, var(--accent) 25%, white); border: none; padding: 0; cursor: pointer; transition: all .35s ease; }
-.lg-dot.active { width: 24px; background: var(--accent); }
 
 /* keyframes */
 @keyframes lgUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
@@ -114,11 +100,10 @@
 @keyframes lgPulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .45; transform: scale(.9); } }
 @keyframes lgSpin { to { transform: rotate(360deg); } }
 
-@media (max-width: 860px) {
-  .lg-left { width: 100%; min-width: 0; padding: 36px 28px; }
-  .lg-form { max-width: none; }
-  .lg-right { display: none; }
+@media (max-width: 480px) {
+  .lg-card { padding: 24px 20px; }
+  .lg-shape { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .login-split * { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition: none !important; }
+  .login-single * { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition: none !important; }
 }

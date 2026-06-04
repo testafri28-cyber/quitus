@@ -27,7 +27,6 @@ const EyeOff = () => (
 /* ---- illustrations flat des étapes (SVG, palette de l'app) ---- */
 const C = { accent: "#6e62b6", accentSoft: "#ece9f6", surface: "#ffffff", border: "#e4e8ee", line: "#eef0f4", green: "#4f9d77", greenSoft: "#e7f2ec", blue: "#5b8def", amber: "#d39a3c", t3: "#8a95a4" };
 
-// Étape 1 — Soumettre : un formulaire qu'on envoie.
 const IlluSubmit = () => (
   <svg viewBox="0 0 300 200" width="100%" height="100%" fill="none">
     <rect x="64" y="36" width="150" height="132" rx="16" fill={C.surface} stroke={C.border} strokeWidth="1.5" />
@@ -36,15 +35,12 @@ const IlluSubmit = () => (
     <rect x="84" y="104" width="110" height="12" rx="6" fill={C.line} />
     <rect x="84" y="134" width="74" height="20" rx="10" fill={C.accent} />
     <rect x="96" y="142" width="34" height="4" rx="2" fill="#fff" opacity="0.85" />
-    {/* avion en papier */}
     <g transform="translate(196 28)">
       <circle cx="20" cy="20" r="26" fill={C.accentSoft} />
       <path d="M11 20l20-8-8 20-3-8-9-4z" fill={C.accent} />
     </g>
   </svg>
 );
-
-// Étape 2 — Suivre : une barre de progression à 3 jalons.
 const IlluTrack = () => (
   <svg viewBox="0 0 300 200" width="100%" height="100%" fill="none">
     <rect x="56" y="97" width="188" height="6" rx="3" fill={C.border} />
@@ -59,14 +55,11 @@ const IlluTrack = () => (
     <rect x="224" y="128" width="32" height="7" rx="3.5" fill={C.line} />
   </svg>
 );
-
-// Étape 3 — Résolu : un grand check + petit ticket validé.
 const IlluDone = () => (
   <svg viewBox="0 0 300 200" width="100%" height="100%" fill="none">
     <circle cx="150" cy="98" r="48" fill={C.greenSoft} />
     <circle cx="150" cy="98" r="31" fill={C.green} />
     <path d="M138 98l8 8 16-17" stroke="#fff" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round" />
-    {/* confettis flat */}
     <rect x="86" y="50" width="11" height="11" rx="2.5" fill={C.accent} transform="rotate(20 91 55)" />
     <rect x="208" y="58" width="9" height="9" rx="2" fill={C.amber} transform="rotate(-15 212 62)" />
     <circle cx="96" cy="140" r="5" fill={C.blue} />
@@ -75,11 +68,10 @@ const IlluDone = () => (
   </svg>
 );
 
-// Les 3 étapes (illustration + texte affiché en bas).
 const STEPS = [
-  { illu: <IlluSubmit />, eyebrow: "Étape 1", title: "Soumettez votre demande", sub: "Décrivez votre intervention ou votre besoin, ajoutez une pièce jointe et choisissez le service concerné." },
-  { illu: <IlluTrack />, eyebrow: "Étape 2", title: "Suivez l'avancement", sub: "Statut en temps réel, échanges avec le service et notifications : vous savez toujours où en est votre demande." },
-  { illu: <IlluDone />, eyebrow: "Étape 3", title: "Résolu et clôturé", sub: "Le bon service prend en main, résout puis clôture — tout reste tracé dans votre espace." },
+  { illu: <IlluSubmit />, title: "Soumettez votre demande", sub: "Décrivez votre intervention ou votre besoin et choisissez le service concerné." },
+  { illu: <IlluTrack />, title: "Suivez l'avancement", sub: "Statut en temps réel, échanges et notifications : vous savez toujours où en est votre demande." },
+  { illu: <IlluDone />, title: "Résolu et clôturé", sub: "Le bon service prend en main, résout puis clôture — tout reste tracé dans votre espace." },
 ];
 
 export default function Login() {
@@ -94,7 +86,6 @@ export default function Login() {
   const [busy, setBusy] = useState(false);
   const [step, setStep] = useState(0);
 
-  // Carrousel automatique : avance 4,5 s après chaque changement (auto ou clic).
   useEffect(() => {
     const t = setTimeout(() => setStep((s) => (s + 1) % STEPS.length), 4500);
     return () => clearTimeout(t);
@@ -113,8 +104,8 @@ export default function Login() {
     if (!valid) return;
     setBusy(true);
     try {
-      const u = await login(email.trim(), password); // POST /api/auth/login → JWT
-      navigate(homePathFor(u), { replace: true });    // redirige selon l'espace
+      const u = await login(email.trim(), password);
+      navigate(homePathFor(u), { replace: true });
     } catch (err) {
       setError(err.message || "Connexion impossible. Réessayez.");
     } finally {
@@ -123,17 +114,38 @@ export default function Login() {
   }
 
   return (
-    <div className="login-split">
-      {/* ----------------- GAUCHE : formulaire ----------------- */}
-      <div className="lg-left">
+    <div className="login-single">
+      {/* ambiance */}
+      <div className="lg-shape lg-s-diamond" aria-hidden="true"><div /></div>
+      <div className="lg-shape lg-s-ring" aria-hidden="true"><div /></div>
+
+      <div className="lg-card">
         <div className="lg-logo">
           <span className="lg-logo-badge"><TicketIco /></span>
           <span className="lg-logo-name">.Tickets</span>
         </div>
 
+        {/* étapes (illustration + texte) */}
+        <div className="lg-steps" aria-hidden="true">
+          <div className="lg-illu">
+            {STEPS.map((s, i) => (
+              <div className={"lg-illu-slide" + (step === i ? " active" : "")} key={i}>{s.illu}</div>
+            ))}
+          </div>
+          <h2 className="lg-rtitle">{STEPS[step].title}</h2>
+          <p className="lg-rsub">{STEPS[step].sub}</p>
+          <div className="lg-dots">
+            {STEPS.map((_, i) => (
+              <button key={i} type="button" className={"lg-dot" + (step === i ? " active" : "")} onClick={() => setStep(i)} aria-label={`Étape ${i + 1}`} />
+            ))}
+          </div>
+        </div>
+
+        <div className="lg-divider" />
+
+        {/* formulaire */}
         <form className="lg-form" onSubmit={handleSubmit} noValidate>
-          <h1 className="lg-title">Bienvenue !</h1>
-          <p className="lg-sub">Entrez vos identifiants pour accéder à votre espace.</p>
+          <p className="lg-formlabel">Connectez-vous à votre espace</p>
 
           {error && <div className="error-box lg-error">{error}</div>}
 
@@ -166,38 +178,11 @@ export default function Login() {
 
           <p className="lg-note">Votre espace est déterminé automatiquement selon votre profil.</p>
         </form>
-
-        <div className="lg-foot">
-          <span>Un problème ? <span className="lg-foot-link">Contactez l'admin</span></span>
-          <span className="lg-foot-link">Confidentialité</span>
-        </div>
       </div>
 
-      {/* ----------------- DROITE : slider d'étapes (illustrations flat) ----------------- */}
-      <div className="lg-right" aria-hidden="true">
-        <div className="lg-glow" />
-
-        {/* formes flottantes (ambiance) */}
-        <div className="lg-shape lg-s-diamond"><div /></div>
-        <div className="lg-shape lg-s-ring"><div /></div>
-
-        {/* illustration flat de l'étape active */}
-        <div className="lg-illu">
-          {STEPS.map((s, i) => (
-            <div className={"lg-illu-slide" + (step === i ? " active" : "")} key={i}>{s.illu}</div>
-          ))}
-        </div>
-
-        {/* texte de l'étape + dots */}
-        <div className="lg-rfoot">
-          <h2 className="lg-rtitle">{STEPS[step].title}</h2>
-          <p className="lg-rsub">{STEPS[step].sub}</p>
-          <div className="lg-dots">
-            {STEPS.map((_, i) => (
-              <button key={i} className={"lg-dot" + (step === i ? " active" : "")} onClick={() => setStep(i)} aria-label={`Étape ${i + 1}`} />
-            ))}
-          </div>
-        </div>
+      <div className="lg-foot">
+        <span>Un problème ? <span className="lg-foot-link">Contactez l'admin</span></span>
+        <span className="lg-foot-link">Confidentialité</span>
       </div>
     </div>
   );
