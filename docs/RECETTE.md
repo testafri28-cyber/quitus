@@ -13,15 +13,15 @@ Guide de test manuel pour valider le système de bout en bout.
 
 **Mot de passe pour tous : `password123`**
 
-### Administrateurs (vous)
+### Administrateur
 | Personne | E-mail |
 |---|---|
 | Bachar Moghnieh (DGA) | `bachar.moghnieh@idc.ci` |
-| Salomé Delmotte | `salome.delmotte@idc.ci` |
 
-### Comptes de démonstration (pour jouer les autres rôles)
+### Membres (dont vous, Salomé)
 | Nom | E-mail | Rôle / Service |
 |---|---|---|
+| Salomé Delmotte | `salome.delmotte@idc.ci` | Membre — **Direction** (IDC) |
 | Boti Raoul | `boti.raoul@idc.ci` | Membre — **responsable** Informatique |
 | Yapo Arthur | `yapo.arthur@idc.ci` | Membre — Informatique |
 | Koffi Brou | `employe.wca@wca.ci` | Membre — **responsable** Logistique (WCA) |
@@ -44,8 +44,8 @@ Pour chaque scénario, notez le résultat : **OK** / **KO** + une remarque si be
 ---
 
 ## 3. Répartition suggérée
-- **Bachar (DGA)** : pilotage & administration → scénarios **A, F, G, H** (indicateurs, utilisateurs, apparence/marque, audit).
-- **Salomé** : parcours utilisateur & traitement → scénarios **B, C, D, E**.
+- **Bachar (DGA, admin)** : pilotage & administration → scénarios **A, F, G, H** (indicateurs, utilisateurs, apparence/marque, audit).
+- **Salomé (membre, service Direction)** : parcours utilisateur & traitement → scénarios **A, B, C, D, E** (création de demande, traitement des demandes adressées à la Direction, chat, notifications). Les scénarios d'administration (F, G) nécessitent un compte admin (Bachar).
 - Faites **au moins un scénario « à deux »** ensemble (D-2, D-3, E-2).
 
 ---
