@@ -14,6 +14,7 @@ export default async function globalTeardown() {
     await prisma.chatRoom.deleteMany({ where: { name: { contains: "[E2E]" } } });
     await prisma.ticket.deleteMany({ where: { title: { contains: "[E2E]" } } });
     await prisma.user.updateMany({ where: { presence: { not: "AVAILABLE" } }, data: { presence: "AVAILABLE" } });
+    await prisma.setting.deleteMany({ where: { key: { startsWith: "brand_" } } }); // retour aux couleurs par défaut
     await prisma.$disconnect();
     console.log("[e2e] nettoyage des données de test terminé.");
   } catch (e) {

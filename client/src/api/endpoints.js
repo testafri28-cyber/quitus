@@ -64,6 +64,8 @@ export const chatApi = {
 export const settingsApi = {
   get: () => api.get("/settings"),
   update: (payload) => api.patch("/settings", payload),
+  getBranding: () => api.get("/settings/branding"),
+  updateBranding: (payload) => api.patch("/settings/branding", payload),
 };
 
 export const notificationsApi = {

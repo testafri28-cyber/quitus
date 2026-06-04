@@ -4,6 +4,8 @@ import { departmentsApi, usersApi, settingsApi, auditApi } from "../api/endpoint
 import { downloadFile } from "../api/client.js";
 import { Icon } from "../components/Icon.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
+import { useBrand } from "../context/BrandContext.jsx";
+import { applyBrand } from "../lib/brand.js";
 import { EmitterBadge } from "../components/Badges.jsx";
 import { UserHistoryModal } from "../components/UserHistoryModal.jsx";
 import { STATUS_ORDER, STATUS_META, ROLE_LABELS, formatDate, inkOn, EVENT_META, EVENT_ACTIONS, eventSentence } from "../lib/design.js";
@@ -18,7 +20,7 @@ export default function AdminGestion() {
           <p className="page-sub">Indicateurs consolidés, utilisateurs et services des deux entreprises.</p>
         </div>
         <div className="tabs">
-          {[["stats", "Indicateurs"], ["perf", "Performance"], ["audit", "Audit"], ["users", "Utilisateurs"], ["depts", "Services & entreprises"], ["params", "Paramètres"]].map(([k, l]) => (
+          {[["stats", "Indicateurs"], ["perf", "Performance"], ["audit", "Audit"], ["users", "Utilisateurs"], ["depts", "Services & entreprises"], ["brand", "Apparence"], ["params", "Paramètres"]].map(([k, l]) => (
             <button key={k} className={"tab" + (tab === k ? " active" : "")} onClick={() => setTab(k)}>{l}</button>
           ))}
         </div>
@@ -27,6 +29,7 @@ export default function AdminGestion() {
         {tab === "audit" && <Audit />}
         {tab === "users" && <Users />}
         {tab === "depts" && <Depts />}
+        {tab === "brand" && <Brand />}
         {tab === "params" && <Params />}
       </div>
     </div>
@@ -414,6 +417,94 @@ function Params() {
         <button type="button" className={"toggle" + (s.suggestionsEnabled ? " on" : "")} onClick={toggle} role="switch" aria-checked={s.suggestionsEnabled} aria-label="Activer la suggestion">
           <span className="toggle-knob" />
         </button>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- Apparence (marque) ---------------- */
+const HEX = /^#[0-9a-fA-F]{6}$/;
+function Brand() {
+  const { brand, previewBrand, saveBrand, resetBrand } = useBrand();
+  const [local, setLocal] = useState(brand);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const [saved, setSaved] = useState(false);
+
+  // Synchronise quand la marque chargée/enregistrée change.
+  useEffect(() => { setLocal(brand); }, [brand]);
+  // En quittant l'onglet sans enregistrer, on revient à la marque enregistrée.
+  useEffect(() => () => applyBrand(brand), [brand]);
+
+  const change = (field, val) => {
+    const next = { ...local, [field]: val };
+    setLocal(next); setSaved(false);
+    if (HEX.test(val)) previewBrand(next);
+  };
+  const valid = ["accent", "accentWca", "accentIdc"].every((f) => HEX.test(local[f]));
+
+  const save = async () => {
+    if (!valid) { setErr("Couleur invalide (format #RRGGBB)."); return; }
+    setBusy(true); setErr("");
+    try { await saveBrand(local); setSaved(true); }
+    catch (e) { setErr(e.message); }
+    finally { setBusy(false); }
+  };
+  const reset = async () => {
+    setBusy(true); setErr("");
+    try { const b = await resetBrand(); setLocal(b); setSaved(true); }
+    catch (e) { setErr(e.message); }
+    finally { setBusy(false); }
+  };
+
+  const rows = [
+    { field: "accent", label: "Couleur principale", hint: "Espace Global, Administration et page de connexion." },
+    { field: "accentWca", label: "Couleur WCA", hint: "Espace West Coast Atlantic." },
+    { field: "accentIdc", label: "Couleur IDC", hint: "Espace Ivoirienne d'Hydrocarbures." },
+  ];
+
+  return (
+    <div style={{ display: "grid", gap: 20, maxWidth: 640 }}>
+      {err && <div className="error-box">{err}</div>}
+
+      <div className="card card-pad" style={{ display: "grid", gap: 16 }}>
+        <div>
+          <div className="section-label" style={{ margin: 0 }}>Couleurs de marque</div>
+          <p className="muted" style={{ fontSize: 13, marginTop: 4, lineHeight: 1.5 }}>
+            Choisissez vos couleurs d'accent. L'aperçu s'applique en direct ; après <strong>Enregistrer</strong>, elles s'appliquent à toute l'application et à la page de connexion.
+          </p>
+        </div>
+        {rows.map((r) => (
+          <div className="spread" key={r.field} style={{ alignItems: "center", gap: 12 }}>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontWeight: 600 }}>{r.label}</div>
+              <div className="muted" style={{ fontSize: 12.5 }}>{r.hint}</div>
+            </div>
+            <div className="row" style={{ gap: 10, flexShrink: 0 }}>
+              <input type="color" value={HEX.test(local[r.field]) ? local[r.field] : "#000000"} onChange={(e) => change(r.field, e.target.value)}
+                style={{ width: 44, height: 38, border: "1px solid var(--border-strong)", borderRadius: 8, padding: 2, background: "var(--surface)" }} />
+              <input className="input mono" style={{ width: 116, textTransform: "uppercase" }} value={local[r.field]} onChange={(e) => change(r.field, e.target.value)} maxLength={7} />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* aperçu */}
+      <div className="card card-pad" style={{ display: "grid", gap: 14 }}>
+        <div className="section-label" style={{ margin: 0 }}>Aperçu</div>
+        <div className="row" style={{ gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+          <button type="button" className="btn btn-primary">Bouton principal</button>
+          <span className="badge" style={{ background: "var(--accent-soft)", color: "var(--accent-text)" }}>Étiquette</span>
+          {rows.map((r) => (
+            <span key={r.field} className="emit"><span className="e-mono" style={{ background: HEX.test(local[r.field]) ? local[r.field] : "#ccc", color: inkOn(local[r.field]) }}>{r.field === "accent" ? "GL" : r.field === "accentWca" ? "WCA" : "IDC"}</span></span>
+          ))}
+        </div>
+      </div>
+
+      <div className="row" style={{ gap: 10, alignItems: "center" }}>
+        <button className="btn btn-primary" onClick={save} disabled={busy || !valid}>{busy ? "Enregistrement…" : "Enregistrer"}</button>
+        <button className="btn btn-subtle" onClick={reset} disabled={busy}>Réinitialiser (défaut)</button>
+        {saved && <span className="muted" style={{ fontSize: 13, color: "var(--st-resolu)" }}>✓ Enregistré</span>}
       </div>
     </div>
   );
