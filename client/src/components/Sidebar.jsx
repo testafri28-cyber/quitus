@@ -116,14 +116,20 @@ export function Sidebar({ space, screen, counts, collapsed, onToggle }) {
         </button>
       ))}
 
+      {/* Option explicite : changer son mot de passe */}
+      <button className="nav-item" onClick={() => setAcct(true)} title={collapsed ? "Mon compte" : undefined}>
+        <Icon name="lock" />
+        <span>Mon compte</span>
+      </button>
+
       <div className="sidebar-foot">
-        <button className="user-card" title={collapsed ? `${user?.name} · ${roleLabel}` : "Mon compte"} onClick={() => setAcct(true)}>
+        <div className="user-card" title={collapsed ? `${user?.name} · ${roleLabel}` : undefined}>
           <Avatar name={user?.name} size={34} />
           <span className="u-meta">
             <span className="u-name">{user?.name}</span>
             <span className="u-role">{roleLabel}</span>
           </span>
-        </button>
+        </div>
       </div>
 
       {acct && <ChangePasswordModal user={user} onClose={() => setAcct(false)} />}

@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { API, USERS, apiLogin, bearer, getDepartments } from "../helpers/auth.js";
+import { API, USERS, apiLogin, apiAuth, authPage, bearer, getDepartments } from "../helpers/auth.js";
 
 const login = (request, email, password) =>
   request.post(`${API}/api/auth/login`, { data: { email, password } });
@@ -9,6 +9,16 @@ test.describe("Mots de passe & sécurité", () => {
     const r = await request.get(`${API}/health`);
     expect(r.status()).toBe(200);
     expect(r.headers()["x-content-type-options"]).toBe("nosniff");
+  });
+
+  test("la sidebar ouvre « Mon compte » (changer le mot de passe)", async ({ page, request }) => {
+    const { token } = await apiAuth(request, USERS.boti);
+    await authPage(page, token);
+    await page.goto("/global/dashboard");
+    await page.locator(".nav-item", { hasText: "Mon compte" }).click();
+    await expect(page.locator(".modal", { hasText: "Mon compte" })).toBeVisible();
+    await expect(page.getByText("Changer mon mot de passe")).toBeVisible();
+    await expect(page.getByPlaceholder("Mot de passe actuel")).toBeVisible();
   });
 
   test("réinit admin + changement par l'utilisateur", async ({ request }) => {
