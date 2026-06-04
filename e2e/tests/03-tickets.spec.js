@@ -110,6 +110,20 @@ test.describe("Tickets — création & cycle de vie", () => {
     expect(seen.ticket.children.some((c) => c.title === "[E2E] besoin bloquant")).toBeTruthy();
   });
 
+  test("notif de commentaire : focus=comments défile vers les commentaires", async ({ page, request }) => {
+    const { token } = await apiAuth(request, USERS.boti);
+    const it = (await getDepartments(request, token)).find((d) => d.name === "Informatique");
+    const cr = await request.post(`${API}/api/tickets`, {
+      headers: bearer(token),
+      data: { title: "[E2E] focus commentaires", description: "x", type: "NEED", space: "GLOBAL", departmentId: it.id },
+    });
+    const { ticket } = await cr.json();
+    await authPage(page, token);
+    await page.setViewportSize({ width: 1280, height: 700 });
+    await page.goto(`/global/tickets/${ticket.id}?focus=comments`);
+    await expect(page.locator("#comments")).toBeInViewport({ timeout: 6000 });
+  });
+
   test("la demande créée apparaît dans le tableau de bord", async ({ page, request }) => {
     const { token } = await apiAuth(request, USERS.boti);
     const it = (await getDepartments(request, token)).find((d) => d.name === "Informatique");

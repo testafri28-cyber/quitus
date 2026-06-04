@@ -48,7 +48,7 @@ export function Topbar({ space, crumbs, onMenu }) {
   const openNotif = (n) => {
     if (!n.read) markRead(n.id);
     setOpen(false);
-    if (n.ticketId) navigate(`/${space}/tickets/${n.ticketId}`);
+    if (n.ticketId) navigate(`/${space}/tickets/${n.ticketId}${n.type === "comment" ? "?focus=comments" : ""}`);
     else if (n.roomId) navigate(`/${space}/chat?room=${n.roomId}`);
   };
 

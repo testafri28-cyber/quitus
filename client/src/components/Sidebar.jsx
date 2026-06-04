@@ -4,31 +4,33 @@ import { Icon } from "./Icon.jsx";
 import { Avatar } from "./Badges.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import { usePresence } from "../context/PresenceContext.jsx";
+import { useNotifications } from "../context/NotificationsContext.jsx";
 import { SPACE_META, allowedSpaces, spaceIndexScreen } from "../lib/spaces.js";
 import { ROLE_LABELS } from "../lib/design.js";
 
-function navItemsFor(space, counts, chatUnread) {
+function navItemsFor(space, counts, chatUnread, mentioned) {
+  const chat = { k: "chat", label: "Discussion", icon: "message", badge: chatUnread || undefined, at: mentioned };
   if (space === "global")
     return [
       { k: "", label: "Accueil", icon: "grid" },
       { k: "form", label: "Nouvelle demande", icon: "plusCircle" },
       { k: "leave", label: "Demande de congé", icon: "calendar" },
       { k: "dashboard", label: "Suivi des demandes", icon: "inbox", badge: counts.total },
-      { k: "chat", label: "Discussion", icon: "message", badge: chatUnread || undefined },
+      chat,
     ];
   if (space === "admin")
     return [
       { k: "dashboard", label: "Toutes les demandes", icon: "inbox", badge: counts.total },
       { k: "form", label: "Nouvelle demande", icon: "plusCircle" },
       { k: "services", label: "Annuaire des services", icon: "grid" },
-      { k: "chat", label: "Discussion", icon: "message", badge: chatUnread || undefined },
+      chat,
       { k: "gestion", label: "Gestion", icon: "settings" },
     ];
   return [
     { k: "dashboard", label: "File de tickets", icon: "inbox", badge: counts.open },
     { k: "form", label: "Nouvelle demande", icon: "plusCircle" },
     { k: "leave", label: "Demande de congé", icon: "calendar" },
-    { k: "chat", label: "Discussion", icon: "message", badge: chatUnread || undefined },
+    chat,
     { k: "services", label: "Annuaire des services", icon: "grid" },
   ];
 }
@@ -36,6 +38,8 @@ function navItemsFor(space, counts, chatUnread) {
 export function Sidebar({ space, screen, counts, collapsed, onToggle }) {
   const { user } = useAuth();
   const { totalUnread } = usePresence();
+  const { items } = useNotifications();
+  const mentioned = items.some((n) => n.type === "mention" && !n.read);
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
@@ -98,11 +102,12 @@ export function Sidebar({ space, screen, counts, collapsed, onToggle }) {
       )}
 
       <div className="nav-group-label">Navigation</div>
-      {navItemsFor(space, counts, totalUnread).map((it) => (
+      {navItemsFor(space, counts, totalUnread, mentioned).map((it) => (
         <button key={it.k || "home"} className={"nav-item" + (screen === it.k ? " active" : "")} onClick={() => goto(it.k)} title={collapsed ? it.label : undefined}>
           <Icon name={it.icon} />
           <span>{it.label}</span>
-          {it.badge != null && <span className="nav-badge">{it.badge}</span>}
+          {it.at ? <span className="nav-at" title="Vous avez été mentionné">@</span>
+            : it.badge != null && <span className="nav-badge">{it.badge}</span>}
         </button>
       ))}
 

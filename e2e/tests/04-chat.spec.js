@@ -44,8 +44,9 @@ test.describe("Discussion — temps réel, mentions, pièces jointes", () => {
 
     // surbrillance côté émetteur
     await expect(a.page.locator(".cm-bubble .mention").last()).toBeVisible();
-    // cloche côté destinataire
+    // cloche côté destinataire + symbole « @ » sur l'item Discussion
     await expect(b.page.locator(".notif .icon-btn .notif-dot")).toBeVisible();
+    await expect(b.page.locator(".nav-item", { hasText: "Discussion" }).locator(".nav-at")).toBeVisible();
     await b.page.locator(".notif .icon-btn").click();
     await expect(b.page.locator(".notif-item", { hasText: "mentionné" })).toBeVisible();
 

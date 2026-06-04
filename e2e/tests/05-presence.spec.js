@@ -28,7 +28,8 @@ test.describe("Présence & badge de discussion", () => {
     await a.page.locator(".chat-composer .btn-primary").click();
 
     const chatNav = b.page.locator(".nav-item", { hasText: "Discussion" });
-    await expect(chatNav.locator(".nav-badge")).toBeVisible();
+    // Indicateur de non-lus : compteur, ou « @ » si une mention est en attente.
+    await expect(chatNav.locator(".nav-badge, .nav-at")).toBeVisible();
 
     await a.context.close();
     await b.context.close();

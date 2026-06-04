@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Icon } from "../components/Icon.jsx";
 import { TypeChip, UrgencyPill, StatusChip, EmitterBadge, Avatar, ServiceIcon } from "../components/Badges.jsx";
 import { UserHistoryModal } from "../components/UserHistoryModal.jsx";
+import { StatusStepper } from "../components/StatusStepper.jsx";
 import { ticketsApi, departmentsApi } from "../api/endpoints.js";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useToast } from "../context/ToastContext.jsx";
@@ -19,6 +20,9 @@ export default function TicketDetail() {
   const { user } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const commentsRef = useRef(null);
+  const scrolledRef = useRef(false);
 
   const [ticket, setTicket] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -38,6 +42,15 @@ export default function TicketDetail() {
     ticketsApi.events(id).then(({ events }) => setEvents(events)).catch(() => {});
   }, [id]);
   useEffect(() => { load(); }, [load]);
+
+  // Notification de commentaire → on déroule jusqu'à la section commentaires.
+  useEffect(() => {
+    if (scrolledRef.current || loading || !ticket) return;
+    if (searchParams.get("focus") === "comments" && commentsRef.current) {
+      scrolledRef.current = true;
+      setTimeout(() => commentsRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 90);
+    }
+  }, [loading, ticket, searchParams]);
 
   // Membres du service (pour le transfert), si l'utilisateur peut agir.
   useEffect(() => {
@@ -116,6 +129,10 @@ export default function TicketDetail() {
                 <h1 className="dh-title">{ticket.title}</h1>
                 <div className="dh-id mono">{ticket.reference} · {TYPE_META[ticket.type].label} · créé le {formatDate(ticket.createdAt)}</div>
               </div>
+            </div>
+
+            <div className="card card-pad stepper-card">
+              <StatusStepper status={ticket.status} />
             </div>
 
             <div className="meta-grid">
@@ -205,7 +222,7 @@ export default function TicketDetail() {
 
             {actionError && <div className="error-box" style={{ marginBottom: 16 }}>{actionError}</div>}
 
-            <div className="card card-pad">
+            <div className="card card-pad" id="comments" ref={commentsRef}>
               <div className="section-label">Commentaires</div>
               {canAct && (
                 <>
