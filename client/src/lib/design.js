@@ -1,8 +1,8 @@
 // Glue entre les enums de l'API (MAJUSCULES) et le langage visuel Quitus (classes CSS minuscules).
 
 export const TYPE_META = {
-  INTERVENTION: { cls: "intervention", label: "Intervention", icon: "wrench", desc: "Action corrective — quelque chose ne fonctionne pas et doit être réparé." },
-  NEED: { cls: "besoin", label: "Besoin particulier", icon: "clipboard", desc: "Demande de prestation ou de ressource à planifier." },
+  INTERVENTION: { cls: "intervention", label: "Intervention", icon: "wrench", desc: "Quelque chose ne fonctionne pas et doit être réparé." },
+  NEED: { cls: "besoin", label: "Besoin", icon: "clipboard", desc: "Une demande de matériel, d'accès ou de service." },
 };
 export const TYPES = ["INTERVENTION", "NEED"];
 
