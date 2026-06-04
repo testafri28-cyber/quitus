@@ -76,4 +76,25 @@ router.get("/me", requireAuth, async (req, res, next) => {
   }
 });
 
+// PATCH /api/auth/password — l'utilisateur change son propre mot de passe
+const pwdSchema = z.object({
+  currentPassword: z.string().min(1, "Mot de passe actuel requis."),
+  newPassword: z.string().min(6, "Le nouveau mot de passe doit faire au moins 6 caractères."),
+});
+router.patch("/password", requireAuth, async (req, res, next) => {
+  try {
+    const parsed = pwdSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0].message });
+    const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+    if (!user || !(await bcrypt.compare(parsed.data.currentPassword, user.passwordHash))) {
+      return res.status(400).json({ error: "Mot de passe actuel incorrect." });
+    }
+    const passwordHash = await bcrypt.hash(parsed.data.newPassword, 10);
+    await prisma.user.update({ where: { id: user.id }, data: { passwordHash } });
+    res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
 export default router;

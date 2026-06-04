@@ -157,15 +157,19 @@ const updateSchema = z.object({
   role: z.enum(ROLES).optional(),
   companyId: z.string().optional(),
   departmentId: z.string().nullable().optional(),
+  password: z.string().min(6, "Mot de passe : 6 caractères minimum.").optional(), // réinitialisation par l'admin
 });
 
 router.patch("/:id", requireAuth, requireRole("ADMIN"), async (req, res, next) => {
   try {
     const parsed = updateSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0].message });
+    const { password, ...rest } = parsed.data;
+    const data = { ...rest };
+    if (password) data.passwordHash = await bcrypt.hash(password, 10);
     const user = await prisma.user.update({
       where: { id: req.params.id },
-      data: parsed.data,
+      data,
       select: userSelect,
     });
     // Si le membre quitte un service dont il était responsable, on libère cette responsabilité.

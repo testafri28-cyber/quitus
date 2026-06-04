@@ -1,6 +1,8 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -22,8 +24,22 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app = express();
 
+// En-têtes de sécurité. API JSON + fichiers servis vers un autre domaine (Vercel) →
+// on désactive la CSP et on autorise le chargement cross-origin des ressources (uploads).
+app.use(helmet({ contentSecurityPolicy: false, crossOriginResourcePolicy: { policy: "cross-origin" } }));
 app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(express.json());
+
+// Anti-brute-force sur la connexion : seules les tentatives ÉCHOUÉES comptent.
+const loginLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 15,
+  skipSuccessfulRequests: true,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Trop de tentatives de connexion. Réessayez dans quelques minutes." },
+});
+app.use("/api/auth/login", loginLimiter);
 
 // Fichiers uploadés (disque local en dev ; disque persistant ou stockage objet en prod).
 app.use("/uploads", express.static(UPLOAD_DIR));

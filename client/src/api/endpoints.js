@@ -4,6 +4,7 @@ import { api } from "./client.js";
 export const authApi = {
   login: (email, password) => api.post("/auth/login", { email, password }),
   me: () => api.get("/auth/me"),
+  changePassword: (currentPassword, newPassword) => api.patch("/auth/password", { currentPassword, newPassword }),
 };
 
 export const ticketsApi = {

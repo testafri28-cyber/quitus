@@ -6,6 +6,7 @@ import { useAuth } from "../context/AuthContext.jsx";
 import { usePresence } from "../context/PresenceContext.jsx";
 import { useNotifications } from "../context/NotificationsContext.jsx";
 import { useBrand } from "../context/BrandContext.jsx";
+import { ChangePasswordModal } from "./ChangePasswordModal.jsx";
 import { spaceColor } from "../lib/brand.js";
 import { SPACE_META, allowedSpaces, spaceIndexScreen } from "../lib/spaces.js";
 import { ROLE_LABELS, inkOn } from "../lib/design.js";
@@ -45,6 +46,7 @@ export function Sidebar({ space, screen, counts, collapsed, onToggle }) {
   const mentioned = items.some((n) => n.type === "mention" && !n.read);
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const [acct, setAcct] = useState(false);
   const ref = useRef(null);
   const sp = SPACE_META[space];
 
@@ -115,14 +117,16 @@ export function Sidebar({ space, screen, counts, collapsed, onToggle }) {
       ))}
 
       <div className="sidebar-foot">
-        <div className="user-card" title={collapsed ? `${user?.name} · ${roleLabel}` : undefined}>
+        <button className="user-card" title={collapsed ? `${user?.name} · ${roleLabel}` : "Mon compte"} onClick={() => setAcct(true)}>
           <Avatar name={user?.name} size={34} />
           <span className="u-meta">
             <span className="u-name">{user?.name}</span>
             <span className="u-role">{roleLabel}</span>
           </span>
-        </div>
+        </button>
       </div>
+
+      {acct && <ChangePasswordModal user={user} onClose={() => setAcct(false)} />}
     </aside>
   );
 }

@@ -130,6 +130,7 @@ function Users() {
   const [err, setErr] = useState("");
   const [form, setForm] = useState({ name: "", email: "", password: "", role: "MEMBER", companyId: "", departmentId: "" });
   const [hist, setHist] = useState(null);
+  const [notice, setNotice] = useState("");
 
   const load = () => usersApi.list().then(({ users }) => setUsers(users)).catch((e) => setErr(e.message));
   useEffect(() => {
@@ -147,12 +148,21 @@ function Users() {
     } catch (e2) { setErr(e2.message); }
   };
   const remove = async (id) => { setErr(""); try { await usersApi.remove(id); load(); } catch (e) { setErr(e.message); } };
+  const resetPwd = async (u) => {
+    const pwd = window.prompt(`Nouveau mot de passe pour ${u.name} (6 caractères minimum) :`);
+    if (pwd == null) return;
+    if (pwd.length < 6) { setErr("Mot de passe : 6 caractères minimum."); return; }
+    setErr(""); setNotice("");
+    try { await usersApi.update(u.id, { password: pwd }); setNotice(`Mot de passe réinitialisé pour ${u.name}.`); }
+    catch (e) { setErr(e.message); }
+  };
   const changeRole = async (u, role) => { setErr(""); try { await usersApi.update(u.id, { role }); load(); } catch (e) { setErr(e.message); } };
   const changeDept = async (u, departmentId) => { setErr(""); try { await usersApi.update(u.id, { departmentId: departmentId || null }); load(); } catch (e) { setErr(e.message); } };
 
   return (
     <div style={{ display: "grid", gap: 20 }}>
       {err && <div className="error-box">{err}</div>}
+      {notice && <div className="error-box" style={{ background: "color-mix(in srgb, var(--st-resolu) 12%, white)", color: "var(--st-resolu)", border: "1px solid color-mix(in srgb, var(--st-resolu) 30%, white)" }}>✓ {notice}</div>}
       <form onSubmit={create} className="card card-pad" style={{ display: "grid", gap: 12 }}>
         <div className="section-label" style={{ margin: 0 }}>Nouvel utilisateur</div>
         <div className="cols-3">
@@ -197,7 +207,12 @@ function Users() {
                   </select>
                 )}
               </td>
-              <td style={{ textAlign: "right" }}>{u.id !== current.id && <button className="btn btn-danger btn-sm" onClick={() => remove(u.id)}>Supprimer</button>}</td>
+              <td style={{ textAlign: "right" }}>
+                <div className="row" style={{ gap: 6, justifyContent: "flex-end" }}>
+                  <button className="btn btn-subtle btn-sm" onClick={() => resetPwd(u)} title="Réinitialiser le mot de passe">Réinit. MDP</button>
+                  {u.id !== current.id && <button className="btn btn-danger btn-sm" onClick={() => remove(u.id)}>Supprimer</button>}
+                </div>
+              </td>
             </tr>
           ))}
         </tbody>
