@@ -37,7 +37,7 @@ const FinanceIco = () => (
 const SLIDES = [
   { title: <>Gérez vos demandes<br />où que vous soyez</>, sub: "Soumettez, suivez et résolvez toutes vos demandes internes depuis un seul espace unifié." },
   { title: <>Chaque demande<br />trouve sa résolution</>, sub: "Vos tickets sont traités et clôturés par les bonnes personnes, au bon moment." },
-  { title: <>21 services<br />à votre disposition</>, sub: "Informatique, RH, Finance et bien d'autres services accessibles en un clic." },
+  { title: <>Tous vos services<br />réunis au même endroit</>, sub: "Informatique, RH, Finance et bien d'autres services accessibles en un clic." },
 ];
 
 export default function Login() {
@@ -146,9 +146,9 @@ export default function Login() {
         <div className="lg-hexwrap">
           <div className="lg-hexbg">
             <svg viewBox="0 0 290 252" xmlns="http://www.w3.org/2000/svg">
-              <polygon points="145,5 281,77 281,185 145,247 9,185 9,77" fill="none" stroke="rgba(15,206,140,0.1)" strokeWidth="18" />
-              <polygon points="145,5 281,77 281,185 145,247 9,185 9,77" fill="rgba(9,12,23,0.78)" stroke="rgba(15,206,140,0.32)" strokeWidth="1.5" />
-              <polygon points="145,18 268,84 268,178 145,234 22,178 22,84" fill="none" stroke="rgba(15,206,140,0.07)" strokeWidth="1" />
+              <polygon points="145,5 281,77 281,185 145,247 9,185 9,77" fill="none" stroke="rgba(110,98,182,0.12)" strokeWidth="18" />
+              <polygon points="145,5 281,77 281,185 145,247 9,185 9,77" fill="rgba(255,255,255,0.55)" stroke="rgba(110,98,182,0.30)" strokeWidth="1.5" />
+              <polygon points="145,18 268,84 268,178 145,234 22,178 22,84" fill="none" stroke="rgba(110,98,182,0.10)" strokeWidth="1" />
             </svg>
           </div>
 
