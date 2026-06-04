@@ -9,8 +9,9 @@
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   gap: 16px; padding: 32px 18px; position: relative; overflow: hidden;
   background:
-    radial-gradient(120% 80% at 50% 0%, color-mix(in srgb, var(--accent) 20%, transparent), transparent 60%),
-    linear-gradient(165deg, color-mix(in srgb, var(--accent) 6%, var(--bg)) 0%, color-mix(in srgb, var(--accent) 15%, var(--bg)) 100%);
+    radial-gradient(72% 60% at 12% 6%, color-mix(in srgb, var(--accent) 28%, transparent), transparent 55%),
+    radial-gradient(72% 60% at 88% 94%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 55%),
+    linear-gradient(160deg, color-mix(in srgb, var(--accent) 9%, var(--bg)) 0%, color-mix(in srgb, var(--accent) 22%, var(--bg)) 100%);
 }
 .login-single *, .login-single *::before, .login-single *::after { box-sizing: border-box; }
 
@@ -21,13 +22,11 @@
 .lg-s-ring { bottom: 14%; left: 13%; animation: lgFloat 9s ease-in-out infinite 1.2s, lgUp .6s ease-out .5s both; }
 .lg-s-ring > div { width: 46px; height: 46px; border-radius: 50%; border: 6px solid color-mix(in srgb, var(--accent) 45%, white); }
 
-/* carte centrale */
+/* contenu central — sans cadre, fondu dans le dégradé */
 .lg-card {
   position: relative; z-index: 1;
-  width: 100%; max-width: 430px;
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius); box-shadow: var(--shadow-lg);
-  padding: 28px 30px 26px;
+  width: 100%; max-width: 400px;
+  padding: 8px 14px;
   animation: lgUp .5s ease-out both;
 }
 
@@ -47,7 +46,7 @@
 .lg-dot { height: 7px; width: 7px; border-radius: 99px; background: color-mix(in srgb, var(--accent) 25%, white); border: none; padding: 0; cursor: pointer; transition: all .35s ease; }
 .lg-dot.active { width: 22px; background: var(--accent); }
 
-.lg-divider { height: 1px; background: var(--border); margin: 22px 0 18px; }
+.lg-divider { height: 1px; background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent) 28%, var(--border)), transparent); margin: 22px 0 18px; }
 
 /* formulaire */
 .lg-form { display: flex; flex-direction: column; }
@@ -57,12 +56,15 @@
 .lg-field { margin-bottom: 12px; }
 .lg-input-wrap { position: relative; }
 .lg-field input {
-  width: 100%; padding: 12px 16px; background: var(--surface);
-  border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+  width: 100%; padding: 13px 16px;
+  background: color-mix(in srgb, var(--surface) 70%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 18%, var(--border));
+  border-radius: var(--radius-sm);
   font: inherit; font-size: 14.5px; color: var(--text);
-  outline: none; transition: border-color .15s, box-shadow .15s;
+  outline: none; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  transition: border-color .15s, box-shadow .15s, background .15s;
 }
-.lg-field input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.lg-field input:focus { background: var(--surface); border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 .lg-field input::placeholder { color: var(--text-3); }
 .lg-field input[type="password"] { padding-right: 46px; }
 .lg-field input[aria-invalid="true"] { border-color: var(--u-urgente); }
@@ -80,9 +82,11 @@
   border: none; border-radius: var(--radius-sm); font: inherit;
   font-size: 15px; font-weight: 600; letter-spacing: .01em; cursor: pointer;
   display: inline-flex; align-items: center; justify-content: center; gap: 9px;
-  box-shadow: var(--shadow-sm); transition: background .15s, transform .05s, box-shadow .15s;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 80%, white) 0%, var(--accent) 52%, var(--accent-hover) 100%);
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--accent) 28%, transparent);
+  transition: filter .15s, transform .05s, box-shadow .15s;
 }
-.lg-btn:hover:not(:disabled) { background: var(--accent-hover); box-shadow: var(--shadow-md); }
+.lg-btn:hover:not(:disabled) { filter: brightness(1.05); box-shadow: 0 10px 26px color-mix(in srgb, var(--accent) 36%, transparent); }
 .lg-btn:active:not(:disabled) { transform: translateY(.5px); }
 .lg-btn:disabled { opacity: .7; cursor: progress; }
 .lg-spinner { width: 16px; height: 16px; border-radius: 50%; border: 2.5px solid rgba(255,255,255,.35); border-top-color: var(--accent-ink); animation: lgSpin .7s linear infinite; }
@@ -101,7 +105,7 @@
 @keyframes lgSpin { to { transform: rotate(360deg); } }
 
 @media (max-width: 480px) {
-  .lg-card { padding: 24px 20px; }
+  .lg-card { padding: 6px 6px; }
   .lg-shape { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
