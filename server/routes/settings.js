@@ -55,6 +55,9 @@ router.patch("/branding", requireAuth, requireRole("ADMIN"), async (req, res, ne
       const key = BRAND_KEY[field];
       await prisma.setting.upsert({ where: { key }, update: { value: val }, create: { key, value: val } });
     }
+    // Synchronise la couleur des entreprises WCA/IDC → badges (EmitterBadge), KPI, etc. suivent.
+    if (parsed.data.accentWca) await prisma.company.updateMany({ where: { slug: "wca" }, data: { color: parsed.data.accentWca } });
+    if (parsed.data.accentIdc) await prisma.company.updateMany({ where: { slug: "idc" }, data: { color: parsed.data.accentIdc } });
     res.json({ branding: await getBranding() });
   } catch (err) {
     next(err);

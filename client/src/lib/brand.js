@@ -22,3 +22,20 @@ export function applyBrand(brand) {
   }
   tag.textContent = css;
 }
+
+// Couleur de marque d'un espace (pour les éléments stylés en JS : pastilles du sélecteur d'espace…).
+export function spaceColor(brand, key) {
+  const b = { ...BRAND_DEFAULTS, ...(brand || {}) };
+  if (key === "wca") return b.accentWca;
+  if (key === "idc") return b.accentIdc;
+  if (key === "admin") return "#5e6b7d"; // l'administration n'est pas une entreprise
+  return b.accent; // global
+}
+
+// Couleur d'un groupe de services (Commun / WCA / IDC) sur l'accueil global.
+export function groupColor(brand, group) {
+  const b = { ...BRAND_DEFAULTS, ...(brand || {}) };
+  if (group === "WCA") return b.accentWca;
+  if (group === "IDC") return b.accentIdc;
+  return b.accent; // Commun
+}

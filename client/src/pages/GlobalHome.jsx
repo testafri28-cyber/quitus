@@ -3,10 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { Icon } from "../components/Icon.jsx";
 import { TypeChip, UrgencyPill, StatusChip, EmitterBadge, ServiceIcon } from "../components/Badges.jsx";
 import { departmentsApi, ticketsApi } from "../api/endpoints.js";
-import { GROUPS, GROUP_META, groupOf } from "../lib/design.js";
+import { GROUPS, GROUP_META, groupOf, inkOn } from "../lib/design.js";
+import { useBrand } from "../context/BrandContext.jsx";
+import { groupColor } from "../lib/brand.js";
 
 export default function GlobalHome() {
   const navigate = useNavigate();
+  const { brand } = useBrand();
   const [departments, setDepartments] = useState([]);
   const [tickets, setTickets] = useState([]);
 
@@ -52,7 +55,7 @@ export default function GlobalHome() {
             return (
               <div className="group-card" key={g}>
                 <div className="gc-head">
-                  <span className="gc-mono" style={{ background: meta.color, color: g === "IDC" ? "#3c2c08" : "#fff" }}>{meta.mono}</span>
+                  <span className="gc-mono" style={{ background: groupColor(brand, g), color: inkOn(groupColor(brand, g)) }}>{meta.mono}</span>
                   <div><div className="gc-name">{meta.label}</div><div className="gc-count">{list.length} services · {meta.sub}</div></div>
                 </div>
                 <div className="gc-list">

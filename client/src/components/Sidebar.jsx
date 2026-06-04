@@ -5,8 +5,10 @@ import { Avatar } from "./Badges.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import { usePresence } from "../context/PresenceContext.jsx";
 import { useNotifications } from "../context/NotificationsContext.jsx";
+import { useBrand } from "../context/BrandContext.jsx";
+import { spaceColor } from "../lib/brand.js";
 import { SPACE_META, allowedSpaces, spaceIndexScreen } from "../lib/spaces.js";
-import { ROLE_LABELS } from "../lib/design.js";
+import { ROLE_LABELS, inkOn } from "../lib/design.js";
 
 function navItemsFor(space, counts, chatUnread, mentioned) {
   const chat = { k: "chat", label: "Discussion", icon: "message", badge: chatUnread || undefined, at: mentioned };
@@ -39,6 +41,7 @@ export function Sidebar({ space, screen, counts, collapsed, onToggle }) {
   const { user } = useAuth();
   const { totalUnread } = usePresence();
   const { items } = useNotifications();
+  const { brand } = useBrand();
   const mentioned = items.some((n) => n.type === "mention" && !n.read);
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
@@ -89,7 +92,7 @@ export function Sidebar({ space, screen, counts, collapsed, onToggle }) {
             const s = SPACE_META[key];
             return (
               <button key={key} className="switch-item" onClick={() => switchSpace(key)}>
-                <span className="sw-dot" style={{ background: s.color, color: key === "idc" ? "#3c2c08" : "#fff" }}>{s.mono}</span>
+                <span className="sw-dot" style={{ background: spaceColor(brand, key), color: inkOn(spaceColor(brand, key)) }}>{s.mono}</span>
                 <span style={{ display: "flex", flexDirection: "column" }}>
                   <span className="sw-name">{key === "global" ? "Espace Global" : s.name}</span>
                   <span className="sw-sub">{s.sub}</span>
