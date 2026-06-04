@@ -23,21 +23,63 @@ const EyeOff = () => (
     <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24" /><line x1="1" y1="1" x2="23" y2="23" />
   </svg>
 );
-const MonitorIco = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><rect x="2" y="3" width="20" height="14" rx="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /></svg>
-);
-const UsersIco = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /></svg>
-);
-const FinanceIco = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" /></svg>
+
+/* ---- illustrations flat des étapes (SVG, palette de l'app) ---- */
+const C = { accent: "#6e62b6", accentSoft: "#ece9f6", surface: "#ffffff", border: "#e4e8ee", line: "#eef0f4", green: "#4f9d77", greenSoft: "#e7f2ec", blue: "#5b8def", amber: "#d39a3c", t3: "#8a95a4" };
+
+// Étape 1 — Soumettre : un formulaire qu'on envoie.
+const IlluSubmit = () => (
+  <svg viewBox="0 0 300 200" width="100%" height="100%" fill="none">
+    <rect x="64" y="36" width="150" height="132" rx="16" fill={C.surface} stroke={C.border} strokeWidth="1.5" />
+    <rect x="84" y="58" width="62" height="10" rx="5" fill={C.accent} />
+    <rect x="84" y="82" width="110" height="12" rx="6" fill={C.line} />
+    <rect x="84" y="104" width="110" height="12" rx="6" fill={C.line} />
+    <rect x="84" y="134" width="74" height="20" rx="10" fill={C.accent} />
+    <rect x="96" y="142" width="34" height="4" rx="2" fill="#fff" opacity="0.85" />
+    {/* avion en papier */}
+    <g transform="translate(196 28)">
+      <circle cx="20" cy="20" r="26" fill={C.accentSoft} />
+      <path d="M11 20l20-8-8 20-3-8-9-4z" fill={C.accent} />
+    </g>
+  </svg>
 );
 
-// Textes du carrousel (synchronisés avec les 3 slides du panneau droit).
-const SLIDES = [
-  { title: <>Gérez vos demandes<br />où que vous soyez</>, sub: "Soumettez, suivez et résolvez toutes vos demandes internes depuis un seul espace unifié." },
-  { title: <>Chaque demande<br />trouve sa résolution</>, sub: "Vos tickets sont traités et clôturés par les bonnes personnes, au bon moment." },
-  { title: <>Tous vos services<br />réunis au même endroit</>, sub: "Informatique, RH, Finance et bien d'autres services accessibles en un clic." },
+// Étape 2 — Suivre : une barre de progression à 3 jalons.
+const IlluTrack = () => (
+  <svg viewBox="0 0 300 200" width="100%" height="100%" fill="none">
+    <rect x="56" y="97" width="188" height="6" rx="3" fill={C.border} />
+    <rect x="56" y="97" width="94" height="6" rx="3" fill={C.accent} />
+    <circle cx="60" cy="100" r="17" fill={C.accent} />
+    <path d="M53 100l5 5 9-10" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
+    <circle className="lg-illu-pulse" cx="150" cy="100" r="17" fill={C.surface} stroke={C.accent} strokeWidth="3" />
+    <circle cx="150" cy="100" r="6" fill={C.accent} />
+    <circle cx="240" cy="100" r="17" fill={C.line} stroke={C.border} strokeWidth="1.5" />
+    <rect x="44" y="128" width="32" height="7" rx="3.5" fill={C.line} />
+    <rect x="134" y="128" width="32" height="7" rx="3.5" fill={C.accentSoft} />
+    <rect x="224" y="128" width="32" height="7" rx="3.5" fill={C.line} />
+  </svg>
+);
+
+// Étape 3 — Résolu : un grand check + petit ticket validé.
+const IlluDone = () => (
+  <svg viewBox="0 0 300 200" width="100%" height="100%" fill="none">
+    <circle cx="150" cy="98" r="48" fill={C.greenSoft} />
+    <circle cx="150" cy="98" r="31" fill={C.green} />
+    <path d="M138 98l8 8 16-17" stroke="#fff" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round" />
+    {/* confettis flat */}
+    <rect x="86" y="50" width="11" height="11" rx="2.5" fill={C.accent} transform="rotate(20 91 55)" />
+    <rect x="208" y="58" width="9" height="9" rx="2" fill={C.amber} transform="rotate(-15 212 62)" />
+    <circle cx="96" cy="140" r="5" fill={C.blue} />
+    <circle cx="206" cy="138" r="6" fill={C.accent} opacity="0.6" />
+    <rect x="196" y="112" width="9" height="9" rx="2" fill={C.green} transform="rotate(25 200 116)" />
+  </svg>
+);
+
+// Les 3 étapes (illustration + texte affiché en bas).
+const STEPS = [
+  { illu: <IlluSubmit />, eyebrow: "Étape 1", title: "Soumettez votre demande", sub: "Décrivez votre intervention ou votre besoin, ajoutez une pièce jointe et choisissez le service concerné." },
+  { illu: <IlluTrack />, eyebrow: "Étape 2", title: "Suivez l'avancement", sub: "Statut en temps réel, échanges avec le service et notifications : vous savez toujours où en est votre demande." },
+  { illu: <IlluDone />, eyebrow: "Étape 3", title: "Résolu et clôturé", sub: "Le bon service prend en main, résout puis clôture — tout reste tracé dans votre espace." },
 ];
 
 export default function Login() {
@@ -50,13 +92,13 @@ export default function Login() {
   const [touched, setTouched] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const [slide, setSlide] = useState(0);
+  const [step, setStep] = useState(0);
 
-  // Carrousel automatique : avance 4 s après chaque changement (auto ou clic).
+  // Carrousel automatique : avance 4,5 s après chaque changement (auto ou clic).
   useEffect(() => {
-    const t = setTimeout(() => setSlide((s) => (s + 1) % SLIDES.length), 4000);
+    const t = setTimeout(() => setStep((s) => (s + 1) % STEPS.length), 4500);
     return () => clearTimeout(t);
-  }, [slide]);
+  }, [step]);
 
   if (user) return <Navigate to={homePathFor(user)} replace />;
 
@@ -131,73 +173,30 @@ export default function Login() {
         </div>
       </div>
 
-      {/* ----------------- DROITE : visuel décoratif ----------------- */}
+      {/* ----------------- DROITE : slider d'étapes (illustrations flat) ----------------- */}
       <div className="lg-right" aria-hidden="true">
         <div className="lg-hexgrid" />
         <div className="lg-glow" />
 
-        {/* formes flottantes */}
+        {/* formes flottantes (ambiance) */}
         <div className="lg-shape lg-s-diamond"><div /></div>
-        <div className="lg-shape lg-s-diamond-sm"><div /></div>
         <div className="lg-shape lg-s-ring"><div /></div>
-        <div className="lg-shape lg-s-tri"><div /></div>
 
-        {/* hexagone + slider */}
-        <div className="lg-hexwrap">
-          <div className="lg-hexbg">
-            <svg viewBox="0 0 290 252" xmlns="http://www.w3.org/2000/svg">
-              <polygon points="145,5 281,77 281,185 145,247 9,185 9,77" fill="none" stroke="rgba(110,98,182,0.12)" strokeWidth="18" />
-              <polygon points="145,5 281,77 281,185 145,247 9,185 9,77" fill="rgba(255,255,255,0.55)" stroke="rgba(110,98,182,0.30)" strokeWidth="1.5" />
-              <polygon points="145,18 268,84 268,178 145,234 22,178 22,84" fill="none" stroke="rgba(110,98,182,0.10)" strokeWidth="1" />
-            </svg>
-          </div>
-
-          <div className="lg-sliderwrap">
-            {/* Slide 1 : intervention en cours */}
-            <div className={"lg-slide" + (slide === 0 ? " active" : "")}>
-              <div className="lg-scard">
-                <div className="lg-sc-top">
-                  <span className="lg-sc-type"><span className="lg-sc-dot" />Intervention</span>
-                  <span className="lg-sc-urg">Urgente</span>
-                </div>
-                <div className="lg-sc-title">Imprimante HS — Salle 12</div>
-                <div className="lg-sc-meta">Informatique · TCK-000012 · 15:08</div>
-              </div>
-            </div>
-
-            {/* Slide 2 : résolu */}
-            <div className={"lg-slide" + (slide === 1 ? " active" : "")}>
-              <div className="lg-scard">
-                <div className="lg-rc-top">
-                  <span className="lg-rc-ok"><span className="lg-rc-check">✓</span>Résolu</span>
-                  <span className="lg-rc-time">Il y a 2h</span>
-                </div>
-                <div className="lg-rc-title">Réinitialisation accès VPN</div>
-                <div className="lg-rc-avs">
-                  <span className="lg-av av1">BR</span><span className="lg-av av2">YA</span><span className="lg-av av3">NE</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Slide 3 : services */}
-            <div className={"lg-slide" + (slide === 2 ? " active" : "")}>
-              <div className="lg-scard">
-                <div className="lg-svc-header">Services</div>
-                <div className="lg-svc-row"><span className="lg-svc-ico ico-b"><MonitorIco /></span><span className="lg-svc-name">Informatique</span></div>
-                <div className="lg-svc-row"><span className="lg-svc-ico ico-g"><UsersIco /></span><span className="lg-svc-name">Ressources Humaines</span></div>
-                <div className="lg-svc-row"><span className="lg-svc-ico ico-p"><FinanceIco /></span><span className="lg-svc-name">Finance</span></div>
-              </div>
-            </div>
-          </div>
+        {/* illustration flat de l'étape active */}
+        <div className="lg-illu">
+          {STEPS.map((s, i) => (
+            <div className={"lg-illu-slide" + (step === i ? " active" : "")} key={i}>{s.illu}</div>
+          ))}
         </div>
 
-        {/* texte + dots */}
+        {/* texte de l'étape + dots */}
         <div className="lg-rfoot">
-          <h2 className="lg-rtitle">{SLIDES[slide].title}</h2>
-          <p className="lg-rsub">{SLIDES[slide].sub}</p>
+          <p className="lg-step">{STEPS[step].eyebrow}</p>
+          <h2 className="lg-rtitle">{STEPS[step].title}</h2>
+          <p className="lg-rsub">{STEPS[step].sub}</p>
           <div className="lg-dots">
-            {SLIDES.map((_, i) => (
-              <button key={i} className={"lg-dot" + (slide === i ? " active" : "")} onClick={() => setSlide(i)} aria-label={`Slide ${i + 1}`} />
+            {STEPS.map((_, i) => (
+              <button key={i} className={"lg-dot" + (step === i ? " active" : "")} onClick={() => setStep(i)} aria-label={`Étape ${i + 1}`} />
             ))}
           </div>
         </div>
