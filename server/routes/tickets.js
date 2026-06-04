@@ -331,6 +331,19 @@ router.patch("/:id/status", requireAuth, async (req, res, next) => {
     if (updated.submittedById !== req.user.id) {
       await notify([updated.submittedById], { type: "status", text: `Votre demande « ${updated.title} » est passée à « ${STATUS_LABELS[status]} »`, ticketId: ticket.id });
     }
+
+    // Besoin lié résolu/clôturé → prévenir le responsable du ticket parent qu'il est débloqué.
+    if ((status === "RESOLVED" || status === "CLOSED") && ticket.parentId) {
+      const parent = await prisma.ticket.findUnique({
+        where: { id: ticket.parentId },
+        select: { id: true, title: true, assignedToId: true, submittedById: true },
+      });
+      const recipient = parent && (parent.assignedToId || parent.submittedById);
+      if (recipient && recipient !== req.user.id) {
+        await notify([recipient], { type: "status", text: `Le besoin lié « ${updated.title} » est résolu — vous pouvez reprendre « ${parent.title} »`, ticketId: parent.id });
+      }
+    }
+
     await logEvent({ ticketId: ticket.id, actorId: req.user.id, action: "status", detail: { from: ticket.status, to: status } });
 
     res.json({ ticket: updated });

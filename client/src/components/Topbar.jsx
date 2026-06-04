@@ -5,6 +5,8 @@ import { useAuth } from "../context/AuthContext.jsx";
 import { useNotifications } from "../context/NotificationsContext.jsx";
 import { NotificationPrefsModal } from "./NotificationPrefsModal.jsx";
 import { SPACE_META } from "../lib/spaces.js";
+import { STATUS_META } from "../lib/design.js";
+import { ticketsApi } from "../api/endpoints.js";
 
 const NOTIF_ICON = {
   new_ticket: "inbox",
@@ -39,11 +41,40 @@ export function Topbar({ space, crumbs, onMenu }) {
   const [prefsOpen, setPrefsOpen] = useState(false);
   const ref = useRef(null);
 
+  // Recherche globale de demandes
+  const [sOpen, setSOpen] = useState(false);
+  const [q, setQ] = useState("");
+  const [results, setResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const sRef = useRef(null);
+  const timer = useRef(null);
+
   useEffect(() => {
-    const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    const h = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+      if (sRef.current && !sRef.current.contains(e.target)) setSOpen(false);
+    };
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
   }, []);
+
+  // Recherche (debounce) sur titre / n° de demande.
+  useEffect(() => {
+    if (!sOpen) return;
+    clearTimeout(timer.current);
+    const term = q.trim();
+    if (term.length < 2) { setResults([]); setSearching(false); return; }
+    setSearching(true);
+    timer.current = setTimeout(() => {
+      ticketsApi.list({ q: term, pageSize: 8 })
+        .then(({ tickets }) => setResults(tickets))
+        .catch(() => setResults([]))
+        .finally(() => setSearching(false));
+    }, 250);
+    return () => clearTimeout(timer.current);
+  }, [q, sOpen]);
+
+  const openTicket = (t) => { setSOpen(false); setQ(""); navigate(`/${space}/tickets/${t.id}`); };
 
   const openNotif = (n) => {
     if (!n.read) markRead(n.id);
@@ -66,7 +97,32 @@ export function Topbar({ space, crumbs, onMenu }) {
         ))}
       </nav>
       <div className="topbar-spacer" />
-      <button className="icon-btn" title="Rechercher"><Icon name="search" /></button>
+
+      <div className="search" ref={sRef}>
+        <button className="icon-btn" title="Rechercher une demande" onClick={() => setSOpen((v) => !v)}><Icon name="search" /></button>
+        {sOpen && (
+          <div className="search-panel fade-in">
+            <div className="ts-box">
+              <Icon name="search" />
+              <input autoFocus placeholder="Rechercher une demande (titre, n°)…" value={q} onChange={(e) => setQ(e.target.value)} />
+            </div>
+            <div className="ts-results">
+              {q.trim().length < 2 ? <div className="ts-empty">Tapez au moins 2 caractères.</div>
+                : searching ? <div className="ts-empty">Recherche…</div>
+                : results.length === 0 ? <div className="ts-empty">Aucune demande trouvée.</div>
+                : results.map((t) => (
+                  <button key={t.id} className="ts-item" onClick={() => openTicket(t)}>
+                    <span className="si-body">
+                      <span className="si-title">{t.title}</span>
+                      <span className="si-meta mono">{t.reference} · {STATUS_META[t.status]?.label}</span>
+                    </span>
+                    <Icon name="arrowRight" style={{ width: 15, height: 15 }} />
+                  </button>
+                ))}
+            </div>
+          </div>
+        )}
+      </div>
 
       <div className="notif" ref={ref}>
         <button className="icon-btn" title="Notifications" onClick={() => setOpen((v) => !v)}>
