@@ -30,9 +30,9 @@
   animation: lgUp .5s ease-out both;
 }
 
-.lg-logo { display: flex; align-items: center; gap: 9px; justify-content: center; }
-.lg-logo-badge { width: 32px; height: 32px; border-radius: 9px; background: var(--accent); display: flex; align-items: center; justify-content: center; color: var(--accent-ink); box-shadow: var(--shadow-sm); }
-.lg-logo-name { font-size: 15px; font-weight: 700; letter-spacing: -.01em; }
+.lg-logo { display: flex; align-items: center; gap: 8px; justify-content: center; }
+.lg-logo-mark { color: var(--accent); display: flex; align-items: center; }
+.lg-logo-name { font-size: 19px; font-weight: 700; letter-spacing: -.02em; }
 
 /* étapes */
 .lg-steps { text-align: center; margin-top: 16px; }

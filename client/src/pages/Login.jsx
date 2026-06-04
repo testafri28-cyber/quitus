@@ -2,17 +2,12 @@ import { useEffect, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 import { homePathFor } from "../lib/spaces.js";
+import { QuitusMark } from "../components/Logo.jsx";
 import "../styles/login.css";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /* ---- icônes inline ---- */
-const TicketIco = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="2" y="7" width="20" height="14" rx="2" /><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2" />
-    <line x1="12" y1="12" x2="12" y2="17" /><line x1="9.5" y1="14.5" x2="14.5" y2="14.5" />
-  </svg>
-);
 const EyeOn = () => (
   <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" />
@@ -121,8 +116,8 @@ export default function Login() {
 
       <div className="lg-card">
         <div className="lg-logo">
-          <span className="lg-logo-badge"><TicketIco /></span>
-          <span className="lg-logo-name">.Tickets</span>
+          <span className="lg-logo-mark"><QuitusMark size={30} /></span>
+          <span className="lg-logo-name">Quitus</span>
         </div>
 
         {/* étapes (illustration + texte) */}
