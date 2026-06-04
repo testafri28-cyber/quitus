@@ -175,7 +175,6 @@ export default function Login() {
 
       {/* ----------------- DROITE : slider d'étapes (illustrations flat) ----------------- */}
       <div className="lg-right" aria-hidden="true">
-        <div className="lg-hexgrid" />
         <div className="lg-glow" />
 
         {/* formes flottantes (ambiance) */}
@@ -191,7 +190,6 @@ export default function Login() {
 
         {/* texte de l'étape + dots */}
         <div className="lg-rfoot">
-          <p className="lg-step">{STEPS[step].eyebrow}</p>
           <h2 className="lg-rtitle">{STEPS[step].title}</h2>
           <p className="lg-rsub">{STEPS[step].sub}</p>
           <div className="lg-dots">
