@@ -859,3 +859,26 @@ a { color: inherit; }
   /* boutons d'action pleine largeur, empilés */
   .spread.actions, .detail-head { flex-wrap: wrap; }
 }
+
+/* ---- Responsive : correctifs d'alignement ---- */
+@media (max-width: 860px) {
+  /* En-tête de page avec action : empiler titre + bouton */
+  .page-head.spread { flex-direction: column; align-items: flex-start; gap: 14px; }
+
+  /* Hero accueil : pile verticale, sans le gros monogramme décoratif */
+  .hero { flex-direction: column; align-items: flex-start; gap: 18px; padding: 24px 20px; }
+  .hero .h-body { min-width: 0; width: 100%; }
+  .hero .h-title { font-size: 23px; }
+  .hero .h-sub { max-width: none; }
+  .hero .h-actions { flex-wrap: wrap; width: 100%; }
+  .hero .h-actions .btn { flex: 1 1 auto; justify-content: center; }
+  .hero > div:last-child { display: none !important; } /* monogramme décoratif (style inline) */
+
+  /* Liste de tickets : largeur suffisante pour aligner les colonnes (défilement horizontal) */
+  .tickets .t-head, .tickets .t-row { min-width: 900px; }
+
+  /* Discussion : le statut occupe sa propre ligne, les salons se replient */
+  .chat-rooms { flex-wrap: wrap; overflow: visible; }
+  .chat-me { flex: 1 0 100%; margin-bottom: 2px; }
+  .chat-room { flex: 0 1 auto; }
+}
