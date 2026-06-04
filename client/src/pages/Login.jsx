@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 import { homePathFor } from "../lib/spaces.js";
@@ -6,9 +6,9 @@ import "../styles/login.css";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-/* ---- petites icônes inline (reprises du HViewBox) ---- */
+/* ---- icônes inline ---- */
 const TicketIco = () => (
-  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
     <rect x="2" y="7" width="20" height="14" rx="2" /><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2" />
     <line x1="12" y1="12" x2="12" y2="17" /><line x1="9.5" y1="14.5" x2="14.5" y2="14.5" />
   </svg>
@@ -20,19 +20,25 @@ const EyeOn = () => (
 );
 const EyeOff = () => (
   <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24" />
-    <line x1="1" y1="1" x2="23" y2="23" />
+    <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24" /><line x1="1" y1="1" x2="23" y2="23" />
   </svg>
 );
 const MonitorIco = () => (
-  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><rect x="2" y="3" width="20" height="14" rx="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /></svg>
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><rect x="2" y="3" width="20" height="14" rx="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /></svg>
 );
 const UsersIco = () => (
-  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /></svg>
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /></svg>
 );
 const FinanceIco = () => (
-  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" /></svg>
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" /></svg>
 );
+
+// Textes du carrousel (synchronisés avec les 3 slides du panneau droit).
+const SLIDES = [
+  { title: <>Gérez vos demandes<br />où que vous soyez</>, sub: "Soumettez, suivez et résolvez toutes vos demandes internes depuis un seul espace unifié." },
+  { title: <>Chaque demande<br />trouve sa résolution</>, sub: "Vos tickets sont traités et clôturés par les bonnes personnes, au bon moment." },
+  { title: <>21 services<br />à votre disposition</>, sub: "Informatique, RH, Finance et bien d'autres services accessibles en un clic." },
+];
 
 export default function Login() {
   const { user, login } = useAuth();
@@ -44,8 +50,14 @@ export default function Login() {
   const [touched, setTouched] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [slide, setSlide] = useState(0);
 
-  // Déjà connecté → on file directement vers le bon espace.
+  // Carrousel automatique : avance 4 s après chaque changement (auto ou clic).
+  useEffect(() => {
+    const t = setTimeout(() => setSlide((s) => (s + 1) % SLIDES.length), 4000);
+    return () => clearTimeout(t);
+  }, [slide]);
+
   if (user) return <Navigate to={homePathFor(user)} replace />;
 
   const emailErr = !email.trim() ? "L'adresse e-mail est requise." : !EMAIL_RE.test(email.trim()) ? "Format d'e-mail invalide." : "";
@@ -59,8 +71,8 @@ export default function Login() {
     if (!valid) return;
     setBusy(true);
     try {
-      const u = await login(email.trim(), password); // POST /api/auth/login → stocke le JWT
-      navigate(homePathFor(u), { replace: true });    // redirige selon l'espace (wca/idc/global/admin)
+      const u = await login(email.trim(), password); // POST /api/auth/login → JWT
+      navigate(homePathFor(u), { replace: true });    // redirige selon l'espace
     } catch (err) {
       setError(err.message || "Connexion impossible. Réessayez.");
     } finally {
@@ -73,29 +85,27 @@ export default function Login() {
       {/* ----------------- GAUCHE : formulaire ----------------- */}
       <div className="lg-left">
         <div className="lg-logo">
-          <span className="lg-logo-ico"><TicketIco /></span>
-          <span className="lg-logo-name">Tickets</span>
+          <span className="lg-logo-badge"><TicketIco /></span>
+          <span className="lg-logo-name">.Tickets</span>
         </div>
 
         <form className="lg-form" onSubmit={handleSubmit} noValidate>
-          <h1 className="lg-title">Connexion</h1>
-          <p className="lg-sub">Accédez à votre espace de gestion des demandes internes.</p>
+          <h1 className="lg-title">Bienvenue !</h1>
+          <p className="lg-sub">Entrez vos identifiants pour accéder à votre espace.</p>
 
           {error && <div className="error-box lg-error">{error}</div>}
 
           <div className="lg-field">
-            <label htmlFor="email">Adresse e-mail</label>
             <div className="lg-input-wrap">
-              <input id="email" type="email" autoComplete="email" placeholder="votre.nom@entreprise.ci"
+              <input type="email" autoComplete="email" placeholder="E-mail"
                 value={email} onChange={(e) => setEmail(e.target.value)} aria-invalid={touched && !!emailErr} />
             </div>
             {touched && emailErr && <div className="lg-hint">{emailErr}</div>}
           </div>
 
           <div className="lg-field">
-            <label htmlFor="password">Mot de passe</label>
             <div className="lg-input-wrap">
-              <input id="password" type={showPwd ? "text" : "password"} autoComplete="current-password" placeholder="Entrez votre mot de passe"
+              <input type={showPwd ? "text" : "password"} autoComplete="current-password" placeholder="Mot de passe"
                 value={password} onChange={(e) => setPassword(e.target.value)} aria-invalid={touched && !!pwdErr} />
               <button type="button" className="lg-eye" onClick={() => setShowPwd((v) => !v)} aria-label={showPwd ? "Masquer le mot de passe" : "Afficher le mot de passe"}>
                 {showPwd ? <EyeOff /> : <EyeOn />}
@@ -123,48 +133,73 @@ export default function Login() {
 
       {/* ----------------- DROITE : visuel décoratif ----------------- */}
       <div className="lg-right" aria-hidden="true">
+        <div className="lg-hexgrid" />
         <div className="lg-glow" />
-        <div className="lg-stripes" />
 
-        <div className="lg-rhead">
-          <p className="lg-eyebrow">Gestion des demandes</p>
-          <h2 className="lg-rtitle">Soumettez,<br />suivez,<br />résolvez.</h2>
-        </div>
+        {/* formes flottantes */}
+        <div className="lg-shape lg-s-diamond"><div /></div>
+        <div className="lg-shape lg-s-diamond-sm"><div /></div>
+        <div className="lg-shape lg-s-ring"><div /></div>
+        <div className="lg-shape lg-s-tri"><div /></div>
 
-        {/* ticket en cours */}
-        <div className="lg-fcard lg-c1">
-          <div className="lg-c1-top">
-            <span className="lg-c1-type"><span className="lg-pulse" />Intervention</span>
-            <span className="lg-c1-badge">Urgente</span>
+        {/* hexagone + slider */}
+        <div className="lg-hexwrap">
+          <div className="lg-hexbg">
+            <svg viewBox="0 0 290 252" xmlns="http://www.w3.org/2000/svg">
+              <polygon points="145,5 281,77 281,185 145,247 9,185 9,77" fill="none" stroke="rgba(15,206,140,0.1)" strokeWidth="18" />
+              <polygon points="145,5 281,77 281,185 145,247 9,185 9,77" fill="rgba(9,12,23,0.78)" stroke="rgba(15,206,140,0.32)" strokeWidth="1.5" />
+              <polygon points="145,18 268,84 268,178 145,234 22,178 22,84" fill="none" stroke="rgba(15,206,140,0.07)" strokeWidth="1" />
+            </svg>
           </div>
-          <div className="lg-c1-title">Imprimante HS — Salle 12</div>
-          <div className="lg-c1-meta">Informatique · TCK-000012 · 15:08</div>
-        </div>
 
-        {/* services */}
-        <div className="lg-fcard lg-c2">
-          <div className="lg-c2-head">Services</div>
-          <div className="lg-c2-row"><span className="lg-c2-ico ico-b"><MonitorIco /></span><span className="lg-c2-name">Informatique</span></div>
-          <div className="lg-c2-row"><span className="lg-c2-ico ico-t"><UsersIco /></span><span className="lg-c2-name">Ressources Humaines</span></div>
-          <div className="lg-c2-row"><span className="lg-c2-ico ico-p"><FinanceIco /></span><span className="lg-c2-name">Finance</span></div>
-        </div>
+          <div className="lg-sliderwrap">
+            {/* Slide 1 : intervention en cours */}
+            <div className={"lg-slide" + (slide === 0 ? " active" : "")}>
+              <div className="lg-scard">
+                <div className="lg-sc-top">
+                  <span className="lg-sc-type"><span className="lg-sc-dot" />Intervention</span>
+                  <span className="lg-sc-urg">Urgente</span>
+                </div>
+                <div className="lg-sc-title">Imprimante HS — Salle 12</div>
+                <div className="lg-sc-meta">Informatique · TCK-000012 · 15:08</div>
+              </div>
+            </div>
 
-        {/* résolu */}
-        <div className="lg-fcard lg-c3">
-          <div className="lg-c3-top">
-            <span className="lg-c3-ok"><span className="lg-c3-check">✓</span>Résolu</span>
-            <span className="lg-c3-time">Il y a 2h</span>
+            {/* Slide 2 : résolu */}
+            <div className={"lg-slide" + (slide === 1 ? " active" : "")}>
+              <div className="lg-scard">
+                <div className="lg-rc-top">
+                  <span className="lg-rc-ok"><span className="lg-rc-check">✓</span>Résolu</span>
+                  <span className="lg-rc-time">Il y a 2h</span>
+                </div>
+                <div className="lg-rc-title">Réinitialisation accès VPN</div>
+                <div className="lg-rc-avs">
+                  <span className="lg-av av1">BR</span><span className="lg-av av2">YA</span><span className="lg-av av3">NE</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Slide 3 : services */}
+            <div className={"lg-slide" + (slide === 2 ? " active" : "")}>
+              <div className="lg-scard">
+                <div className="lg-svc-header">Services</div>
+                <div className="lg-svc-row"><span className="lg-svc-ico ico-b"><MonitorIco /></span><span className="lg-svc-name">Informatique</span></div>
+                <div className="lg-svc-row"><span className="lg-svc-ico ico-g"><UsersIco /></span><span className="lg-svc-name">Ressources Humaines</span></div>
+                <div className="lg-svc-row"><span className="lg-svc-ico ico-p"><FinanceIco /></span><span className="lg-svc-name">Finance</span></div>
+              </div>
+            </div>
           </div>
-          <div className="lg-c3-title">Réinitialisation accès VPN</div>
-          <div className="lg-c3-avs">
-            <span className="lg-av av1">BR</span><span className="lg-av av2">YA</span><span className="lg-av av3">NE</span>
-          </div>
         </div>
 
-        {/* stat */}
-        <div className="lg-stat">
-          <div className="lg-stat-n">21</div>
-          <div className="lg-stat-l">services</div>
+        {/* texte + dots */}
+        <div className="lg-rfoot">
+          <h2 className="lg-rtitle">{SLIDES[slide].title}</h2>
+          <p className="lg-rsub">{SLIDES[slide].sub}</p>
+          <div className="lg-dots">
+            {SLIDES.map((_, i) => (
+              <button key={i} className={"lg-dot" + (slide === i ? " active" : "")} onClick={() => setSlide(i)} aria-label={`Slide ${i + 1}`} />
+            ))}
+          </div>
         </div>
       </div>
     </div>
