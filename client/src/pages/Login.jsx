@@ -139,7 +139,7 @@ export default function Login() {
 
           <div className="lg-field">
             <div className="lg-input-wrap">
-              <input type="email" autoComplete="email" placeholder="E-mail"
+              <input type="email" autoComplete="email" placeholder="E-mail" aria-label="Adresse e-mail"
                 value={email} onChange={(e) => setEmail(e.target.value)} aria-invalid={touched && !!emailErr} />
             </div>
             {touched && emailErr && <div className="lg-hint">{emailErr}</div>}
@@ -147,7 +147,7 @@ export default function Login() {
 
           <div className="lg-field">
             <div className="lg-input-wrap">
-              <input type={showPwd ? "text" : "password"} autoComplete="current-password" placeholder="Mot de passe"
+              <input type={showPwd ? "text" : "password"} autoComplete="current-password" placeholder="Mot de passe" aria-label="Mot de passe"
                 value={password} onChange={(e) => setPassword(e.target.value)} aria-invalid={touched && !!pwdErr} />
               <button type="button" className="lg-eye" onClick={() => setShowPwd((v) => !v)} aria-label={showPwd ? "Masquer le mot de passe" : "Afficher le mot de passe"}>
                 {showPwd ? <EyeOff /> : <EyeOn />}
