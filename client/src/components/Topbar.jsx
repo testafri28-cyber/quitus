@@ -30,7 +30,7 @@ function relTime(iso) {
   return `il y a ${d} j`;
 }
 
-export function Topbar({ space, crumbs }) {
+export function Topbar({ space, crumbs, onMenu }) {
   const sp = SPACE_META[space];
   const { logout } = useAuth();
   const navigate = useNavigate();
@@ -54,6 +54,9 @@ export function Topbar({ space, crumbs }) {
 
   return (
     <header className="topbar">
+      <button className="topbar-burger" onClick={onMenu} title="Menu" aria-label="Ouvrir le menu">
+        <Icon name="panelLeft" />
+      </button>
       <nav className="crumbs">
         {crumbs.map((c, i) => (
           <span key={i} style={{ display: "contents" }}>

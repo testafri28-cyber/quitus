@@ -24,6 +24,7 @@ export function Layout() {
   const location = useLocation();
   const [counts, setCounts] = useState({ total: 0, open: 0 });
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem("sidebar_collapsed") === "1");
+  const [mobileOpen, setMobileOpen] = useState(false); // tiroir de navigation sur petit écran
 
   const toggleSidebar = () => {
     setCollapsed((c) => {
@@ -48,6 +49,9 @@ export function Layout() {
     return () => { active = false; };
   }, [location.pathname]);
 
+  // Ferme le tiroir mobile à chaque changement d'écran.
+  useEffect(() => { setMobileOpen(false); }, [location.pathname]);
+
   // Écran courant = segment après /:space
   const parts = location.pathname.split("/").filter(Boolean); // ['wca','dashboard']
   const seg = parts[1] || "";
@@ -59,10 +63,11 @@ export function Layout() {
   const crumbs = [spaceLabel, screenLabel].filter(Boolean);
 
   return (
-    <div className={"app" + (collapsed ? " collapsed" : "")} data-space={space}>
+    <div className={"app" + (collapsed ? " collapsed" : "") + (mobileOpen ? " mobile-nav-open" : "")} data-space={space}>
       <Sidebar space={space} screen={screen} counts={counts} collapsed={collapsed} onToggle={toggleSidebar} />
+      <div className="nav-overlay" onClick={() => setMobileOpen(false)} />
       <div className="main">
-        <Topbar space={space} crumbs={crumbs} />
+        <Topbar space={space} crumbs={crumbs} onMenu={() => setMobileOpen(true)} />
         <Outlet context={{ space }} />
       </div>
     </div>
