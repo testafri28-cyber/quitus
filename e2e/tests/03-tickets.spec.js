@@ -1,5 +1,9 @@
 import { test, expect } from "@playwright/test";
+import path from "path";
+import { fileURLToPath } from "url";
 import { API, USERS, apiAuth, authPage, bearer, getDepartments } from "../helpers/auth.js";
+
+const here = path.dirname(fileURLToPath(import.meta.url));
 
 test.describe("Tickets — création & cycle de vie", () => {
   test("création d'une demande via le formulaire", async ({ page, request }) => {
@@ -134,5 +138,36 @@ test.describe("Tickets — création & cycle de vie", () => {
     await authPage(page, token);
     await page.goto("/global/dashboard");
     await expect(page.getByText("[E2E] Visible dashboard")).toBeVisible();
+  });
+
+  test("création avec plusieurs pièces jointes", async ({ page, request }) => {
+    const { token } = await apiAuth(request, USERS.boti);
+    await authPage(page, token);
+    await page.goto("/global/form");
+
+    const marker = `[E2E] Multi-PJ ${Date.now()}`;
+    await page.locator("input.input").fill(marker);
+    await page.locator(".picker-trigger").click();
+    await page.locator(".picker-search input").fill("Informatique");
+    await page.locator(".pick-item", { hasText: "Informatique" }).first().click();
+    await page.locator("textarea.textarea").fill("[E2E] description multi-pj");
+
+    // Sélection de deux fichiers d'un coup
+    await page.locator('.dropzone input[type="file"]').setInputFiles([
+      path.join(here, "../fixtures/sample.txt"),
+      path.join(here, "../fixtures/sample2.txt"),
+    ]);
+    await expect(page.locator(".file-chip")).toHaveCount(2);
+
+    await page.getByRole("button", { name: /Soumettre la demande/ }).click();
+    await expect(page.getByText("Demande soumise avec succès.")).toBeVisible();
+
+    // Vérification via l'API : le ticket porte bien 2 pièces jointes.
+    const { tickets } = await (await request.get(`${API}/api/tickets?q=${encodeURIComponent("Multi-PJ")}&pageSize=5`, { headers: bearer(token) })).json();
+    const created = tickets.find((t) => t.title === marker);
+    expect(created, "ticket créé introuvable").toBeTruthy();
+    const { ticket } = await (await request.get(`${API}/api/tickets/${created.id}`, { headers: bearer(token) })).json();
+    expect(ticket.attachments.length).toBe(2);
+    expect(ticket.attachments.map((a) => a.name).sort()).toEqual(["sample.txt", "sample2.txt"]);
   });
 });

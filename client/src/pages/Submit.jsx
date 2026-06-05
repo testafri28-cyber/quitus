@@ -42,7 +42,8 @@ export default function Submit() {
   const [suggestEnabled, setSuggestEnabled] = useState(true);
   const [urgency, setUrgency] = useState("NORMAL");
   const [desc, setDesc] = useState(searchParams.get("description") || "");
-  const [file, setFile] = useState(null);
+  const [files, setFiles] = useState([]); // plusieurs pièces jointes possibles
+  const MAX_FILES = 5;
   // Pièce jointe reportée depuis un message de salon (déjà uploadée → on réutilise son URL).
   const [carriedAttachment, setCarriedAttachment] = useState(() => {
     const url = searchParams.get("attachmentUrl");
@@ -89,8 +90,11 @@ export default function Submit() {
       fd.append("departmentId", service);
       if (suggested) fd.append("suggestedToId", suggested);
       fd.append("description", desc.trim());
-      if (file) fd.append("attachment", file);
-      else if (carriedAttachment) fd.append("attachmentUrl", carriedAttachment.url); // réutilise la PJ du message
+      files.forEach((f) => fd.append("attachments", f)); // une ou plusieurs pièces jointes
+      if (carriedAttachment) {
+        fd.append("attachmentUrl", carriedAttachment.url); // réutilise la PJ du message
+        fd.append("attachmentName", carriedAttachment.name);
+      }
       if (parentId) fd.append("parentId", parentId); // lien de dépendance vers le ticket en attente
       const { ticket } = await ticketsApi.create(fd);
       showToast("Demande soumise avec succès.", { to: `/${space}/tickets/${ticket.id}`, label: `Ouvrir ${ticket.reference}` });
@@ -177,33 +181,51 @@ export default function Submit() {
           </div>
 
           <div className="field" style={{ marginBottom: 0 }}>
-            <label className="label">Pièce jointe <span className="opt">· optionnel</span></label>
-            {file ? (
-              <div className="file-chip">
-                <span className="fc-ico"><Icon name="file" /></span>
-                <span style={{ flex: 1 }}>
-                  <div className="fc-name">{file.name}</div>
-                  <div className="fc-size mono">{(file.size / 1024).toFixed(0)} Ko</div>
-                </span>
-                <button className="icon-btn" onClick={() => setFile(null)} title="Retirer"><Icon name="x" /></button>
+            <label className="label">Pièces jointes <span className="opt">· optionnel</span></label>
+            {(files.length > 0 || carriedAttachment) && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 10 }}>
+                {files.map((f, i) => (
+                  <div className="file-chip" key={f.name + f.size + i}>
+                    <span className="fc-ico"><Icon name="file" /></span>
+                    <span style={{ flex: 1 }}>
+                      <div className="fc-name">{f.name}</div>
+                      <div className="fc-size mono">{(f.size / 1024).toFixed(0)} Ko</div>
+                    </span>
+                    <button className="icon-btn" onClick={() => setFiles((prev) => prev.filter((_, j) => j !== i))} title="Retirer"><Icon name="x" /></button>
+                  </div>
+                ))}
+                {carriedAttachment && (
+                  <div className="file-chip">
+                    <span className="fc-ico"><Icon name="file" /></span>
+                    <span style={{ flex: 1 }}>
+                      <div className="fc-name">{carriedAttachment.name}</div>
+                      <div className="fc-size mono">Pièce jointe reportée du salon</div>
+                    </span>
+                    <button className="icon-btn" onClick={() => setCarriedAttachment(null)} title="Retirer"><Icon name="x" /></button>
+                  </div>
+                )}
               </div>
-            ) : carriedAttachment ? (
-              <div className="file-chip">
-                <span className="fc-ico"><Icon name="file" /></span>
-                <span style={{ flex: 1 }}>
-                  <div className="fc-name">{carriedAttachment.name}</div>
-                  <div className="fc-size mono">Pièce jointe reportée du salon</div>
-                </span>
-                <button className="icon-btn" onClick={() => setCarriedAttachment(null)} title="Retirer"><Icon name="x" /></button>
-              </div>
-            ) : (
+            )}
+            {files.length + (carriedAttachment ? 1 : 0) < MAX_FILES && (
               <label className="dropzone">
                 <span className="dz-ico"><Icon name="upload" /></span>
                 <span>
-                  <div className="dz-title">Glissez un fichier ou cliquez pour parcourir</div>
-                  <div className="dz-sub">PDF, image ou tableur — 10 Mo max</div>
+                  <div className="dz-title">Glissez des fichiers ou cliquez pour parcourir</div>
+                  <div className="dz-sub">PDF, image ou tableur — 10 Mo par fichier · {MAX_FILES} max</div>
                 </span>
-                <input type="file" style={{ display: "none" }} onChange={(e) => setFile(e.target.files?.[0] || null)} />
+                <input type="file" multiple style={{ display: "none" }} onChange={(e) => {
+                  const picked = Array.from(e.target.files || []);
+                  e.target.value = ""; // permet de re-sélectionner le même fichier
+                  setFiles((prev) => {
+                    const room = MAX_FILES - (carriedAttachment ? 1 : 0) - prev.length;
+                    const merged = [...prev];
+                    for (const f of picked) {
+                      if (merged.length >= prev.length + room) break;
+                      if (!merged.some((x) => x.name === f.name && x.size === f.size)) merged.push(f);
+                    }
+                    return merged;
+                  });
+                }} />
               </label>
             )}
           </div>

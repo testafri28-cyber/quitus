@@ -63,6 +63,7 @@ const ticketInclude = {
   department: { select: { id: true, name: true, code: true, companyId: true } },
   sourceCompany: { select: { id: true, name: true, slug: true, color: true } },
   feedback: true,
+  attachments: { select: { id: true, url: true, name: true }, orderBy: { createdAt: "asc" } },
   parent: { select: { id: true, reference: true, title: true, status: true } },
   children: { select: { id: true, reference: true, title: true, status: true, type: true }, orderBy: { createdAt: "asc" } },
 };
@@ -220,6 +221,7 @@ const createSchema = z.object({
   leaveEnd: z.string().optional(),
   leaveKind: z.string().optional(),
   attachmentUrl: z.string().optional(), // réutilisation d'un fichier déjà uploadé (ex. pièce jointe d'un message de salon)
+  attachmentName: z.string().optional(),
   parentId: z.string().optional(), // besoin créé pour débloquer un ticket en attente (lien de dépendance)
 });
 
@@ -230,7 +232,7 @@ function departmentVisibleInSpace(dept, space) {
   return dept.company?.slug === space.toLowerCase();
 }
 
-router.post("/", requireAuth, upload.single("attachment"), async (req, res, next) => {
+router.post("/", requireAuth, upload.array("attachments", 5), async (req, res, next) => {
   try {
     const parsed = createSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -275,8 +277,13 @@ router.post("/", requireAuth, upload.single("attachment"), async (req, res, next
       suggested = m.id;
     }
 
-    // Nouveau fichier uploadé en priorité, sinon réutilisation d'un fichier existant (pièce jointe de salon).
-    const attachmentUrl = req.file ? `/uploads/${req.file.filename}` : reusedAttachment;
+    // Pièces jointes : fichiers uploadés (plusieurs possibles) + éventuel fichier réutilisé d'un salon.
+    const attachments = [
+      ...(req.files || []).map((f) => ({ url: `/uploads/${f.filename}`, name: f.originalname })),
+    ];
+    if (reusedAttachment) attachments.push({ url: reusedAttachment, name: parsed.data.attachmentName || reusedAttachment.split("/").pop() });
+    // Compat héritée : le premier fichier reste exposé via attachmentUrl (anciens clients).
+    const attachmentUrl = attachments[0]?.url || null;
 
     // Lien de dépendance : le besoin doit pointer vers un ticket parent que l'émetteur peut voir.
     let parentId = null;
@@ -302,6 +309,7 @@ router.post("/", requireAuth, upload.single("attachment"), async (req, res, next
         submittedById: req.user.id,
         suggestedToId: suggested,
         attachmentUrl,
+        attachments: attachments.length ? { create: attachments.map((a) => ({ url: a.url, name: a.name })) } : undefined,
         parentId,
         leaveStart: leaveStart ? new Date(leaveStart) : null,
         leaveEnd: leaveEnd ? new Date(leaveEnd) : null,

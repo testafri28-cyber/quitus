@@ -175,6 +175,7 @@ model Ticket {
   comments      Comment[]
   feedback      Feedback?
   documents     TicketDocument[]
+  attachments   TicketAttachment[]
   notifications Notification[]
   events        TicketEvent[]
 
@@ -214,6 +215,19 @@ model TicketDocument {
 
   @@index([ticketId])
   @@map("ticket_documents")
+}
+
+// Pièces jointes fournies par le demandeur à la création (plusieurs fichiers possibles).
+model TicketAttachment {
+  id        String   @id @default(cuid())
+  ticketId  String   @map("ticket_id")
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  url       String
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([ticketId])
+  @@map("ticket_attachments")
 }
 
 model TicketEvent {

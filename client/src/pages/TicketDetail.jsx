@@ -230,13 +230,25 @@ export default function TicketDetail() {
               ) : (
                 <div className="desc-body" style={{ marginTop: 10 }}><p>{ticket.description}</p></div>
               )}
-              {!editReq && ticket.attachmentUrl && (
+              {!editReq && (ticket.attachments?.length ? (
+                <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 8 }}>
+                  {ticket.attachments.map((a) => (
+                    <div className="file-chip" key={a.id}>
+                      <span className="fc-ico"><Icon name="paperclip" /></span>
+                      <span style={{ flex: 1, minWidth: 0 }}>
+                        <div className="fc-name" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.name}</div>
+                      </span>
+                      <a className="btn btn-subtle btn-sm" href={`${BASE_URL}${a.url}`} target="_blank" rel="noreferrer">Télécharger</a>
+                    </div>
+                  ))}
+                </div>
+              ) : ticket.attachmentUrl ? (
                 <div className="file-chip" style={{ marginTop: 8 }}>
                   <span className="fc-ico"><Icon name="paperclip" /></span>
                   <span style={{ flex: 1 }}><div className="fc-name">Pièce jointe</div><div className="fc-size mono">fichier</div></span>
                   <a className="btn btn-subtle btn-sm" href={`${BASE_URL}${ticket.attachmentUrl}`} target="_blank" rel="noreferrer">Télécharger</a>
                 </div>
-              )}
+              ) : null)}
             </div>
 
             <div className="card card-pad" style={{ marginBottom: 22 }}>
