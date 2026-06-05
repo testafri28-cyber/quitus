@@ -151,6 +151,44 @@ router.get("/:id", requireAuth, async (req, res, next) => {
   }
 });
 
+/* ---------------- PATCH /api/tickets/:id — le demandeur corrige sa demande ---------------- */
+const editSchema = z.object({
+  title: z.string().min(3, "Titre trop court.").max(200).optional(),
+  description: z.string().min(1, "Description requise.").optional(),
+});
+
+router.patch("/:id", requireAuth, async (req, res, next) => {
+  try {
+    const parsed = editSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0].message });
+    if (parsed.data.title === undefined && parsed.data.description === undefined) {
+      return res.status(400).json({ error: "Rien à modifier." });
+    }
+
+    const ticket = await prisma.ticket.findUnique({ where: { id: req.params.id } });
+    if (!ticket) return res.status(404).json({ error: "Ticket introuvable." });
+
+    const isAdmin = req.user.role === "ADMIN";
+    if (ticket.submittedById !== req.user.id && !isAdmin) {
+      return res.status(403).json({ error: "Seul le demandeur peut modifier sa demande." });
+    }
+    // Le demandeur ne peut corriger que tant que la demande n'est pas prise en main.
+    if (!isAdmin && (ticket.assignedToId || ticket.status !== "NEW")) {
+      return res.status(409).json({ error: "La demande est déjà prise en charge — elle n'est plus modifiable." });
+    }
+
+    const data = {};
+    if (parsed.data.title !== undefined) data.title = parsed.data.title;
+    if (parsed.data.description !== undefined) data.description = parsed.data.description;
+
+    const updated = await prisma.ticket.update({ where: { id: ticket.id }, data, include: ticketInclude });
+    await logEvent({ ticketId: ticket.id, actorId: req.user.id, action: "edit", detail: { fields: Object.keys(data) } });
+    res.json({ ticket: updated });
+  } catch (err) {
+    next(err);
+  }
+});
+
 /* ---------------- POST /api/tickets ---------------- */
 /* ---------------- GET /api/tickets/:id/events — journal du ticket ---------------- */
 router.get("/:id/events", requireAuth, async (req, res, next) => {
@@ -568,6 +606,51 @@ router.post("/:id/comments", requireAuth, async (req, res, next) => {
     await logEvent({ ticketId: ticket.id, actorId: req.user.id, action: "comment", detail: { internal: isInternal } });
 
     res.status(201).json({ comment });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/* ---------------- PATCH /api/tickets/:id/comments/:commentId — éditer son commentaire ---------------- */
+// Fenêtre d'édition/suppression : un quart d'heure après publication.
+const COMMENT_EDIT_WINDOW_MS = 15 * 60 * 1000;
+
+router.patch("/:id/comments/:commentId", requireAuth, async (req, res, next) => {
+  try {
+    const parsed = z.object({ content: z.string().min(1, "Commentaire vide.") }).safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0].message });
+
+    const comment = await prisma.comment.findUnique({ where: { id: req.params.commentId } });
+    if (!comment || comment.ticketId !== req.params.id) return res.status(404).json({ error: "Commentaire introuvable." });
+    if (comment.authorId !== req.user.id) return res.status(403).json({ error: "Vous ne pouvez modifier que vos propres commentaires." });
+    if (Date.now() - new Date(comment.createdAt).getTime() > COMMENT_EDIT_WINDOW_MS) {
+      return res.status(409).json({ error: "Le délai de modification (15 min) est dépassé." });
+    }
+
+    const updated = await prisma.comment.update({
+      where: { id: comment.id },
+      data: { content: parsed.data.content, editedAt: new Date() },
+      include: { author: { select: { id: true, name: true, role: true } } },
+    });
+    res.json({ comment: updated });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/* ---------------- DELETE /api/tickets/:id/comments/:commentId — supprimer son commentaire ---------------- */
+router.delete("/:id/comments/:commentId", requireAuth, async (req, res, next) => {
+  try {
+    const comment = await prisma.comment.findUnique({ where: { id: req.params.commentId } });
+    if (!comment || comment.ticketId !== req.params.id) return res.status(404).json({ error: "Commentaire introuvable." });
+    // L'auteur (dans le délai) ou un admin peuvent supprimer.
+    const isAuthor = comment.authorId === req.user.id;
+    if (!isAuthor && req.user.role !== "ADMIN") return res.status(403).json({ error: "Suppression réservée à l'auteur." });
+    if (isAuthor && req.user.role !== "ADMIN" && Date.now() - new Date(comment.createdAt).getTime() > COMMENT_EDIT_WINDOW_MS) {
+      return res.status(409).json({ error: "Le délai de suppression (15 min) est dépassé." });
+    }
+    await prisma.comment.delete({ where: { id: comment.id } });
+    res.json({ ok: true });
   } catch (err) {
     next(err);
   }

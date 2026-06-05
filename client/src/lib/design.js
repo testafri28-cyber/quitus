@@ -119,6 +119,7 @@ export const EVENT_META = {
   transfer_refused: { icon: "x", label: "Transfert refusé" },
   transfer_cancelled: { icon: "x", label: "Transfert annulé" },
   comment: { icon: "message", label: "Commentaire" },
+  edit: { icon: "edit", label: "Modification" },
   document: { icon: "paperclip", label: "Document" },
   feedback: { icon: "star", label: "Avis" },
 };
@@ -138,6 +139,12 @@ export function eventSentence(action, detailRaw) {
     case "transfer_refused": return "a refusé le transfert";
     case "transfer_cancelled": return "a annulé le transfert";
     case "comment": return d.internal ? "a ajouté un commentaire interne" : "a commenté";
+    case "edit": {
+      const f = Array.isArray(d.fields) ? d.fields : [];
+      const fr = { title: "le titre", description: "la description" };
+      const labels = f.map((k) => fr[k] || k);
+      return labels.length ? `a modifié ${labels.join(" et ")}` : "a modifié la demande";
+    }
     case "document": return `a déposé un document${d.name ? ` (${d.name})` : ""}`;
     case "feedback": return `a laissé un avis${d.rating ? ` (${d.rating}/5)` : ""}`;
     default: return action;

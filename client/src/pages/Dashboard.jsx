@@ -24,6 +24,8 @@ export default function Dashboard() {
   const [fType, setFType] = useState([]);
   const [fStatus, setFStatus] = useState([]);
   const [fUrg, setFUrg] = useState([]);
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 20;
 
   useEffect(() => {
     setLoading(true);
@@ -67,6 +69,12 @@ export default function Dashboard() {
     })
     .sort((a, b) => prio(a.alerts) - prio(b.alerts) || new Date(b.t.createdAt) - new Date(a.t.createdAt))
   , [withAlerts, q, fType, fStatus, fUrg, alertFilter]);
+
+  // Pagination de la liste filtrée (affichage). Retour à la page 1 dès que le filtre change.
+  useEffect(() => { setPage(1); }, [q, fType, fStatus, fUrg, alertFilter, view]);
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, pageCount);
+  const pageItems = useMemo(() => filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE), [filtered, safePage]);
 
   const title = isAdmin ? "Toutes les demandes" : view === "mine" ? "Mes demandes" : "Demandes reçues";
   const sub = isAdmin ? "Vue consolidée des deux entreprises."
@@ -151,7 +159,7 @@ export default function Dashboard() {
             </div>
             {filtered.length === 0 ? (
               <div className="empty"><Icon name="inbox" /><div>Aucune demande ne correspond à ces filtres.</div></div>
-            ) : filtered.map(({ t }) => (
+            ) : pageItems.map(({ t }) => (
                 <button key={t.id} className={"t-row" + (t.urgency === "URGENT" ? " urgent" : "")} onClick={() => navigate(`/${space}/tickets/${t.id}`)}>
                   <TypeChip type={t.type} />
                   <div className="t-titlewrap">
@@ -187,6 +195,19 @@ export default function Dashboard() {
                   </div>
                 </button>
             ))}
+            {pageCount > 1 && (
+              <div className="pager">
+                <button className="btn btn-subtle btn-sm" disabled={safePage <= 1} onClick={() => setPage(safePage - 1)}>
+                  <Icon name="chevLeft" />Précédent
+                </button>
+                <span className="pager-info">
+                  {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, filtered.length)} sur {filtered.length}
+                </span>
+                <button className="btn btn-subtle btn-sm" disabled={safePage >= pageCount} onClick={() => setPage(safePage + 1)}>
+                  Suivant<Icon name="chevRight" />
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

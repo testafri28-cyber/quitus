@@ -30,6 +30,13 @@ export default function TicketDetail() {
   const [actionError, setActionError] = useState("");
   const [draft, setDraft] = useState("");
   const [commentMode, setCommentMode] = useState("internal"); // 'internal' (note interne) | 'public' (message au demandeur)
+  // Édition de la demande (par le demandeur, tant qu'elle n'est pas prise en main)
+  const [editReq, setEditReq] = useState(false);
+  const [titleDraft, setTitleDraft] = useState("");
+  const [descDraft, setDescDraft] = useState("");
+  // Édition d'un commentaire (par son auteur, dans les 15 min)
+  const [editCid, setEditCid] = useState(null);
+  const [editCdraft, setEditCdraft] = useState("");
   const [members, setMembers] = useState([]);
   const [transferTo, setTransferTo] = useState("");
   const [allDepts, setAllDepts] = useState([]);
@@ -66,8 +73,8 @@ export default function TicketDetail() {
 
   async function run(fn, ok) {
     setActionError("");
-    try { await fn(); if (ok) showToast(ok); load(); }
-    catch (e) { setActionError(e.message); }
+    try { await fn(); if (ok) showToast(ok); load(); return true; }
+    catch (e) { setActionError(e.message); return false; }
   }
 
   if (loading) return <div className="scroll"><div className="page"><div className="empty">Chargement…</div></div></div>;
@@ -115,6 +122,28 @@ export default function TicketDetail() {
   const respondTransfer = (accept) => run(() => ticketsApi.respondTransfer(ticket.id, accept), accept ? "Transfert accepté." : "Transfert refusé.");
 
   const canFeedback = ticket.submittedById === user.id && (ticket.status === "RESOLVED" || ticket.status === "CLOSED") && !ticket.feedback;
+
+  // Le demandeur peut corriger sa demande tant qu'elle n'est pas prise en main.
+  const canEditRequest = ticket.submittedById === user.id && ticket.status === "NEW" && !ticket.assignedToId;
+  const startEdit = () => { setTitleDraft(ticket.title); setDescDraft(ticket.description); setEditReq(true); setActionError(""); };
+  const saveEdit = () => {
+    if (!titleDraft.trim() || !descDraft.trim()) { setActionError("Le titre et la description sont requis."); return; }
+    run(() => ticketsApi.update(ticket.id, { title: titleDraft.trim(), description: descDraft.trim() }), "Demande mise à jour.")
+      .then((ok) => { if (ok) setEditReq(false); });
+  };
+
+  // Fenêtre de modification/suppression d'un commentaire : 15 min après publication.
+  const COMMENT_WINDOW = 15 * 60 * 1000;
+  const canEditComment = (c) => c.author?.id === user.id && Date.now() - new Date(c.createdAt).getTime() < COMMENT_WINDOW;
+  const canDeleteComment = (c) => user.role === "ADMIN" || canEditComment(c);
+  const saveComment = (c) => {
+    if (!editCdraft.trim()) return;
+    run(() => ticketsApi.editComment(ticket.id, c.id, editCdraft.trim()), "Commentaire modifié.").then((ok) => { if (ok) setEditCid(null); });
+  };
+  const removeComment = (c) => {
+    if (!window.confirm("Supprimer ce commentaire ?")) return;
+    run(() => ticketsApi.deleteComment(ticket.id, c.id), "Commentaire supprimé.");
+  };
 
   return (
     <div className="scroll">
@@ -180,9 +209,28 @@ export default function TicketDetail() {
             )}
 
             <div className="card card-pad" style={{ marginBottom: 22 }}>
-              <div className="section-label">{ticket.leaveStart ? "Motif" : "Description"}</div>
-              <div className="desc-body"><p>{ticket.description}</p></div>
-              {ticket.attachmentUrl && (
+              <div className="spread" style={{ marginBottom: editReq ? 12 : 0 }}>
+                <div className="section-label" style={{ margin: 0 }}>{ticket.leaveStart ? "Motif" : "Description"}</div>
+                {canEditRequest && !editReq && (
+                  <button className="btn btn-subtle btn-sm" onClick={startEdit}><Icon name="edit" />Modifier</button>
+                )}
+              </div>
+              {editReq ? (
+                <div style={{ marginTop: 12 }}>
+                  <label className="label">Titre</label>
+                  <input className="input" value={titleDraft} onChange={(e) => setTitleDraft(e.target.value)} />
+                  <label className="label" style={{ marginTop: 12 }}>Description</label>
+                  <textarea className="textarea" style={{ minHeight: 110 }} value={descDraft} onChange={(e) => setDescDraft(e.target.value)} />
+                  <div className="row" style={{ gap: 8, marginTop: 12 }}>
+                    <button className="btn btn-primary btn-sm" onClick={saveEdit}><Icon name="check" />Enregistrer</button>
+                    <button className="btn btn-ghost btn-sm" onClick={() => setEditReq(false)}>Annuler</button>
+                  </div>
+                  <div className="hint" style={{ marginTop: 8 }}>Modifiable tant que la demande n'est pas prise en main.</div>
+                </div>
+              ) : (
+                <div className="desc-body" style={{ marginTop: 10 }}><p>{ticket.description}</p></div>
+              )}
+              {!editReq && ticket.attachmentUrl && (
                 <div className="file-chip" style={{ marginTop: 8 }}>
                   <span className="fc-ico"><Icon name="paperclip" /></span>
                   <span style={{ flex: 1 }}><div className="fc-name">Pièce jointe</div><div className="fc-size mono">fichier</div></span>
@@ -250,9 +298,33 @@ export default function TicketDetail() {
                     <div className="c-head">
                       <span className="c-name">{nameNode(c.author)}</span>
                       {c.isInternal && <span className="badge" style={{ padding: "1px 7px" }}>Interne</span>}
-                      <span className="c-time">{formatDate(c.createdAt)}</span>
+                      <span className="c-time">{formatDate(c.createdAt)}{c.editedAt ? " · modifié" : ""}</span>
+                      {editCid !== c.id && (canEditComment(c) || canDeleteComment(c)) && (
+                        <span className="c-actions">
+                          {canEditComment(c) && (
+                            <button className="c-act" title="Modifier" onClick={() => { setEditCid(c.id); setEditCdraft(c.content); }}>
+                              <Icon name="edit" style={{ width: 14, height: 14 }} />
+                            </button>
+                          )}
+                          {canDeleteComment(c) && (
+                            <button className="c-act" title="Supprimer" onClick={() => removeComment(c)}>
+                              <Icon name="trash" style={{ width: 14, height: 14 }} />
+                            </button>
+                          )}
+                        </span>
+                      )}
                     </div>
-                    <div className="c-bubble">{c.content}</div>
+                    {editCid === c.id ? (
+                      <div className="c-edit">
+                        <textarea className="textarea" style={{ minHeight: 60 }} value={editCdraft} onChange={(e) => setEditCdraft(e.target.value)} />
+                        <div className="row" style={{ gap: 8, marginTop: 8 }}>
+                          <button className="btn btn-primary btn-sm" onClick={() => saveComment(c)} disabled={!editCdraft.trim()}>Enregistrer</button>
+                          <button className="btn btn-ghost btn-sm" onClick={() => setEditCid(null)}>Annuler</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="c-bubble">{c.content}</div>
+                    )}
                   </div>
                 </div>
               ))}

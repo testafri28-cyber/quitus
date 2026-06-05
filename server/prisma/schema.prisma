@@ -196,6 +196,7 @@ model Comment {
   content    String
   isInternal Boolean  @default(false) @map("is_internal")
   createdAt  DateTime @default(now()) @map("created_at")
+  editedAt   DateTime? @map("edited_at")
 
   @@index([ticketId])
   @@map("comments")

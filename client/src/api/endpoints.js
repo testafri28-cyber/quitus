@@ -15,6 +15,7 @@ export const ticketsApi = {
     return api.get(`/tickets${qs ? `?${qs}` : ""}`);
   },
   get: (id) => api.get(`/tickets/${id}`),
+  update: (id, payload) => api.patch(`/tickets/${id}`, payload),
   create: (formData) => api.postForm("/tickets", formData),
   createLeave: (payload) => api.post("/tickets", payload),
   setStatus: (id, status) => api.patch(`/tickets/${id}/status`, { status }),
@@ -23,6 +24,8 @@ export const ticketsApi = {
   respondTransfer: (id, accept) => api.patch(`/tickets/${id}/transfer/respond`, { accept }),
   comment: (id, content, isInternal = false) =>
     api.post(`/tickets/${id}/comments`, { content, isInternal }),
+  editComment: (id, commentId, content) => api.patch(`/tickets/${id}/comments/${commentId}`, { content }),
+  deleteComment: (id, commentId) => api.del(`/tickets/${id}/comments/${commentId}`),
   uploadDocument: (id, formData) => api.postForm(`/tickets/${id}/documents`, formData),
   feedback: (id, rating, comment) => api.post(`/tickets/${id}/feedback`, { rating, comment }),
   events: (id) => api.get(`/tickets/${id}/events`),
