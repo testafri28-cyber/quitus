@@ -6,7 +6,7 @@ import {
 } from "../../api/superadmin.js";
 import { Badge, Loading, ErrorBox } from "./ui.jsx";
 
-function NewTenantModal({ onClose, onCreated }) {
+export function NewTenantModal({ onClose, onCreated }) {
   const [form, setForm] = useState({ name: "", contact_email: "", contact_phone: "", plan: "STARTER", status: "TRIAL", billing_cycle: "MONTHLY" });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");

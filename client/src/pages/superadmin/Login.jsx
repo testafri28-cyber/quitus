@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useSuperAuth } from "./SuperAuth.jsx";
+import { QuitusMark } from "./QuitusMark.jsx";
 import "./superadmin.css";
 
 export default function SaLogin() {
@@ -25,7 +26,7 @@ export default function SaLogin() {
     <div className="sa-login">
       <form className="sa-login-card" onSubmit={submit}>
         <div className="sa-login-brand">
-          <span className="sa-logo" style={{ width: 46, height: 46, fontSize: 17 }}>Q</span>
+          <span className="sa-logo" style={{ width: 46, height: 46, background: "#fff", borderRadius: 12, display: "grid", placeItems: "center", boxShadow: "var(--shadow-sm)" }}><QuitusMark size={30} /></span>
           <div>
             <div className="sa-login-title">Quitus · Backoffice</div>
             <div className="sa-login-sub">Espace éditeur</div>

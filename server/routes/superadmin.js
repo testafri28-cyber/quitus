@@ -1,12 +1,37 @@
 // Backoffice SaaS (éditeur Quitus) : clients (tenants), abonnements, facturation, revenus.
 // Toutes les routes exigent le rôle SUPER_ADMIN. Aucun lien avec le frontoffice.
 import { Router } from "express";
+import fs from "node:fs";
+import path from "node:path";
 import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
 import { requireSuperAdmin, signSuperToken } from "../middleware/superadmin-auth.js";
+import { computeHealth } from "../services/healthScore.js";
+import { socketConnectionCount } from "../socket.js";
+import { pushEnabled } from "../services/push.js";
+import { UPLOAD_DIR } from "../lib/uploads.js";
 
 const router = Router();
+
+// État technique du système (observabilité — partagé par /cockpit et /system/health).
+function systemHealthPayload() {
+  let storage = { mode: process.env.S3_BUCKET ? "objet (S3/R2)" : "disque local", files: 0, bytes: 0 };
+  try {
+    const files = fs.readdirSync(UPLOAD_DIR);
+    storage.files = files.length;
+    for (const f of files) { try { storage.bytes += fs.statSync(path.join(UPLOAD_DIR, f)).size; } catch { /* ignore */ } }
+  } catch { /* dossier absent */ }
+  return {
+    uptimeSeconds: Math.round(process.uptime()),
+    socketConnections: socketConnectionCount(),
+    email: { state: process.env.RESEND_API_KEY ? "actif" : "disabled" },
+    webPush: { state: pushEnabled ? "actif" : "disabled" },
+    storage,
+    jobs: { state: "disabled", pending: 0 }, // pas de file de jobs dans ce build
+  };
+}
 
 /* ---------------- Authentification du backoffice (login séparé) ---------------- */
 const loginSchema = z.object({
@@ -23,6 +48,27 @@ router.post("/auth/login", async (req, res, next) => {
     }
     const token = signSuperToken(admin);
     res.json({ token, admin: { id: admin.id, name: admin.name, email: admin.email } });
+  } catch (err) { next(err); }
+});
+
+// Fin d'une session de connexion-en-tant-que : accepte le JETON D'IMPERSONATION
+// (scope "impersonation"), PAS le jeton backoffice → placé AVANT la garde superadmin.
+router.post("/impersonate/stop", async (req, res, next) => {
+  try {
+    const header = req.headers.authorization || "";
+    const token = (header.startsWith("Bearer ") ? header.slice(7) : null) || req.body?.token;
+    if (!token) return res.status(400).json({ error: "Jeton requis." });
+    let payload;
+    try { payload = jwt.verify(token, process.env.JWT_SECRET); } catch { return res.status(401).json({ error: "Jeton invalide." }); }
+    if (payload.scope !== "impersonation") return res.status(400).json({ error: "Ce n'est pas une session de consultation." });
+    await prisma.superAdminAudit.create({
+      data: {
+        admin_id: payload.impersonatedBy || "?", admin_email: payload.impersonatedByEmail || "?",
+        action: "IMPERSONATION_END", detail: `Fin de consultation${payload.tenantName ? ` de « ${payload.tenantName} »` : ""}`,
+        tenant_id: payload.tenantId || null, target_user_id: payload.sub || null, ip: req.ip,
+      },
+    });
+    res.json({ ok: true });
   } catch (err) { next(err); }
 });
 
@@ -76,6 +122,33 @@ async function computeMrr(priceMap) {
     byPlan[row.plan] = amount;
   }
   return { mrr, byPlan };
+}
+
+const HEALTH_TTL_MS = 60 * 60 * 1000; // recalcule à la lecture si le dernier snapshot a > 1 h
+const daysSince = (d) => (d ? Math.floor((Date.now() - new Date(d).getTime()) / 86400000) : 999);
+
+// Statut de facturation d'un tenant, dérivé des factures réelles.
+async function billingStatusFor(tenant) {
+  if (tenant.status === "SUSPENDED") return "suspended";
+  const overdue = await prisma.invoice.count({ where: { tenant_id: tenant.id, status: "OVERDUE" } });
+  if (overdue > 0) return "overdue";
+  const pending = await prisma.invoice.count({ where: { tenant_id: tenant.id, status: "PENDING" } });
+  if (pending > 0) return "pending";
+  return "up_to_date";
+}
+
+// Dernier snapshot de santé ; recalculé (et persisté) s'il est absent ou périmé (> 1 h).
+async function freshSnapshot(tenant) {
+  const last = await prisma.healthSnapshot.findFirst({ where: { tenant_id: tenant.id }, orderBy: { computed_at: "desc" } });
+  if (last && Date.now() - new Date(last.computed_at).getTime() < HEALTH_TTL_MS) return last;
+  const billingStatus = await billingStatusFor(tenant);
+  const h = computeHealth({
+    tickets30d: tenant.tickets_30d, tickets90dAvg: tenant.tickets_90d_avg,
+    daysSinceLastActivity: daysSince(tenant.last_activity_at),
+    openEscalations: tenant.open_escalations, escalationsOver24h: tenant.escalations_over_24h,
+    billingStatus,
+  });
+  return prisma.healthSnapshot.create({ data: { tenant_id: tenant.id, ...h } });
 }
 
 /* ---------------- Dashboard ---------------- */
@@ -389,6 +462,180 @@ router.get("/revenue", async (_req, res, next) => {
       churnRate,
       payments6months: series,
     });
+  } catch (err) { next(err); }
+});
+
+/* ---------------- Santé système ---------------- */
+router.get("/system/health", (_req, res) => res.json(systemHealthPayload()));
+
+/* ---------------- Cockpit (landing orientée action) ---------------- */
+const SEV_ORDER = { high: 0, medium: 1, low: 2 };
+
+router.get("/cockpit", async (_req, res, next) => {
+  try {
+    await markOverdue();
+    const now = new Date();
+    const mStart = monthStart(now);
+    const in7 = new Date(now.getTime() + 7 * 86400000);
+    const priceMap = await planPriceMap();
+
+    const [{ mrr }, overdueAgg, tenants, churnedTotal, activeCount] = await Promise.all([
+      computeMrr(priceMap),
+      prisma.invoice.aggregate({ _sum: { amount_fcfa: true }, _count: { _all: true }, where: { status: "OVERDUE" } }),
+      prisma.tenant.findMany(),
+      prisma.tenant.count({ where: { status: "CHURNED" } }),
+      prisma.tenant.count({ where: { status: "ACTIVE" } }),
+    ]);
+
+    // Santé de chaque compte (recalcul paresseux).
+    const withHealth = [];
+    for (const t of tenants) {
+      const snap = await freshSnapshot(t);
+      withHealth.push({ tenant: t, snap });
+    }
+    const atRisk = withHealth.filter((x) => x.snap.bucket === "A_RISQUE");
+
+    // File d'attention (uniquement des items actionnables).
+    const queue = [];
+    const overdueInvoices = await prisma.invoice.findMany({
+      where: { status: "OVERDUE" }, include: { tenant: { select: { id: true, name: true } } }, orderBy: { due_date: "asc" }, take: 10,
+    });
+    for (const inv of overdueInvoices) {
+      queue.push({ type: "billing", severity: "high", label: `Facture en retard — ${inv.tenant?.name}`, detail: `${inv.amount_fcfa.toLocaleString("fr-FR")} FCFA`, action: "open_account", targetId: inv.tenant?.id });
+    }
+    for (const x of withHealth) {
+      if (x.tenant.status === "TRIAL" && x.tenant.trial_ends_at && x.tenant.trial_ends_at >= now && x.tenant.trial_ends_at <= in7) {
+        const d = Math.max(0, Math.ceil((new Date(x.tenant.trial_ends_at) - now) / 86400000));
+        queue.push({ type: "trial", severity: "medium", label: `Fin d'essai — ${x.tenant.name}`, detail: `J-${d}`, action: "open_account", targetId: x.tenant.id });
+      }
+    }
+    for (const x of atRisk) {
+      queue.push({ type: "health", severity: "high", label: `Compte à risque — ${x.tenant.name}`, detail: `Score ${x.snap.score}/100`, action: "open_account", targetId: x.tenant.id });
+    }
+    for (const x of withHealth) {
+      if (x.tenant.open_escalations > 0) {
+        queue.push({ type: "support", severity: x.tenant.escalations_over_24h > 0 ? "high" : "medium", label: `Escalade ouverte — ${x.tenant.name}`, detail: `${x.tenant.open_escalations} escalade(s)`, action: "open_account", targetId: x.tenant.id });
+      }
+    }
+    queue.sort((a, b) => SEV_ORDER[a.severity] - SEV_ORDER[b.severity]);
+
+    const watchlist = withHealth
+      .slice().sort((a, b) => a.snap.score - b.snap.score).slice(0, 5)
+      .map((x) => ({ id: x.tenant.id, name: x.tenant.name, plan: x.tenant.plan, status: x.tenant.status, score: x.snap.score, bucket: x.snap.bucket }));
+
+    const netRetention = Math.round((activeCount / Math.max(1, activeCount + churnedTotal)) * 100);
+
+    res.json({
+      kpis: {
+        mrr,
+        netRetention,                                   // rétention logos (%)
+        atRiskCount: atRisk.length,
+        overdueTotal: overdueAgg._sum.amount_fcfa || 0, // FCFA en retard
+        overdueCount: overdueAgg._count._all,
+      },
+      attentionQueue: queue,
+      systemHealth: systemHealthPayload(),
+      watchlist,
+    });
+  } catch (err) { next(err); }
+});
+
+/* ---------------- Comptes (clients) + fiche 360° ---------------- */
+const BUCKETS = ["SAIN", "A_SURVEILLER", "A_RISQUE"];
+
+router.get("/accounts", async (req, res, next) => {
+  try {
+    await markOverdue();
+    const { status, plan, bucket } = req.query;
+    const where = {};
+    if (status && STATUSES.includes(status)) where.status = status;
+    if (plan && PLANS.includes(plan)) where.plan = plan;
+    const tenants = await prisma.tenant.findMany({
+      where, orderBy: { created_at: "desc" },
+      include: { _count: { select: { invoices: true } } },
+    });
+    let accounts = [];
+    for (const t of tenants) {
+      const snap = await freshSnapshot(t);
+      accounts.push({
+        id: t.id, name: t.name, plan: t.plan, status: t.status,
+        contact_email: t.contact_email, created_at: t.created_at, next_renewal: t.next_renewal, trial_ends_at: t.trial_ends_at,
+        invoiceCount: t._count.invoices,
+        health: { score: snap.score, bucket: snap.bucket },
+      });
+    }
+    if (bucket && BUCKETS.includes(bucket)) accounts = accounts.filter((a) => a.health.bucket === bucket);
+    res.json({ accounts });
+  } catch (err) { next(err); }
+});
+
+router.get("/accounts/:id", async (req, res, next) => {
+  try {
+    await markOverdue();
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: req.params.id },
+      include: {
+        invoices: { orderBy: { created_at: "desc" } },
+        payments: { orderBy: { paid_at: "desc" } },
+      },
+    });
+    if (!tenant) return res.status(404).json({ error: "Compte introuvable." });
+
+    const snap = await freshSnapshot(tenant);
+    const billingStatus = await billingStatusFor(tenant);
+    const trend = await prisma.healthSnapshot.findMany({ where: { tenant_id: tenant.id }, orderBy: { computed_at: "desc" }, take: 12, select: { score: true, computed_at: true } });
+
+    // Timeline d'activité du compte (depuis l'audit).
+    const timeline = await prisma.superAdminAudit.findMany({ where: { tenant_id: tenant.id }, orderBy: { created_at: "desc" }, take: 15 });
+
+    // Cible d'impersonation (si reliée).
+    let impersonation = { available: false };
+    if (tenant.frontoffice_user_id) {
+      const u = await prisma.user.findUnique({ where: { id: tenant.frontoffice_user_id }, select: { id: true, name: true, email: true } });
+      if (u) impersonation = { available: true, user: u };
+    }
+
+    res.json({
+      tenant,
+      health: { ...snap, billingStatus, trend: trend.reverse() },
+      usage: {
+        tickets30d: tenant.tickets_30d, tickets90dAvg: tenant.tickets_90d_avg,
+        lastActivityAt: tenant.last_activity_at,
+        openEscalations: tenant.open_escalations, escalationsOver24h: tenant.escalations_over_24h,
+      },
+      timeline,
+      impersonation,
+    });
+  } catch (err) { next(err); }
+});
+
+/* ---------------- Connexion-en-tant-que (impersonation) ---------------- */
+router.post("/accounts/:id/impersonate", async (req, res, next) => {
+  try {
+    const tenant = await prisma.tenant.findUnique({ where: { id: req.params.id } });
+    if (!tenant) return res.status(404).json({ error: "Compte introuvable." });
+    if (!tenant.frontoffice_user_id) return res.status(409).json({ error: "Ce compte n'est pas relié à un utilisateur frontoffice." });
+    const user = await prisma.user.findUnique({ where: { id: tenant.frontoffice_user_id } });
+    if (!user) return res.status(409).json({ error: "Utilisateur frontoffice introuvable." });
+
+    // JWT frontoffice JETABLE (sub réel → session valide ; scope impersonation → 0 accès backoffice).
+    const token = jwt.sign(
+      {
+        sub: user.id, role: user.role, scope: "impersonation",
+        impersonatedBy: req.superAdmin.id, impersonatedByEmail: req.superAdmin.email,
+        tenantId: tenant.id, tenantName: tenant.name,
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: "30m" }
+    );
+    await prisma.superAdminAudit.create({
+      data: {
+        admin_id: req.superAdmin.id, admin_email: req.superAdmin.email,
+        action: "IMPERSONATION_START", detail: `Consultation de « ${tenant.name} » en tant que ${user.email}`,
+        tenant_id: tenant.id, target_user_id: user.id, ip: req.ip,
+      },
+    });
+    res.json({ token, user: { name: user.name, email: user.email }, tenant: { id: tenant.id, name: tenant.name } });
   } catch (err) { next(err); }
 });
 

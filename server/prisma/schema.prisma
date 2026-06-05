@@ -373,10 +373,46 @@ model Tenant {
   contact_phone String?
   churned_at    DateTime? // date de résiliation (statut → CHURNED) pour le calcul du churn
   created_at    DateTime     @default(now())
-  invoices      Invoice[]
-  payments      Payment[]
+
+  // Signaux de santé (le tenant n'est pas relié au frontoffice : ces signaux sont
+  // alimentés par seed/intégration externe ; la facturation, elle, est dérivée des factures).
+  last_activity_at    DateTime?
+  tickets_30d         Int       @default(0)
+  tickets_90d_avg     Int       @default(0)
+  open_escalations    Int       @default(0)
+  escalations_over_24h Int      @default(0)
+
+  // Connexion-en-tant-que : utilisateur frontoffice « consulté en tant que » (optionnel).
+  frontoffice_user_id String?
+
+  invoices        Invoice[]
+  payments        Payment[]
+  healthSnapshots HealthSnapshot[]
 
   @@map("tenants")
+}
+
+// Historisation du score de santé client (le dernier snapshot fait foi à l'affichage).
+model HealthSnapshot {
+  id         String       @id @default(cuid())
+  tenant_id  String
+  tenant     Tenant       @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  score      Int          // 0–100
+  bucket     HealthBucket
+  usage      Int
+  engagement Int
+  support    Int
+  billing    Int
+  computed_at DateTime    @default(now())
+
+  @@index([tenant_id, computed_at])
+  @@map("health_snapshots")
+}
+
+enum HealthBucket {
+  SAIN
+  A_SURVEILLER
+  A_RISQUE
 }
 
 // Catalogue tarifaire des plans (prix mensuel en FCFA) — base du calcul MRR/ARR.
@@ -394,8 +430,11 @@ model SuperAdminAudit {
   id         String   @id @default(cuid())
   admin_id   String
   admin_email String
-  action     String // tenant.create | tenant.update | invoice.create | invoice.pay | invoice.cancel
+  action     String // tenant.create|update | invoice.create|pay|cancel | IMPERSONATION_START|END
   detail     String? // résumé lisible
+  tenant_id      String? // cible (compte client) le cas échéant
+  target_user_id String? // utilisateur frontoffice consulté (impersonation)
+  ip             String?
   created_at DateTime @default(now())
 
   @@index([created_at])

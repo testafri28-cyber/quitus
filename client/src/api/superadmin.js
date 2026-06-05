@@ -43,6 +43,28 @@ export const superadminApi = {
   plans: () => saRequest("/plans"),
   audit: () => saRequest("/audit"),
   changePassword: (currentPassword, newPassword) => saRequest("/auth/password", { method: "PATCH", body: { currentPassword, newPassword } }),
+  // Console d'opérateur
+  cockpit: () => saRequest("/cockpit"),
+  systemHealth: () => saRequest("/system/health"),
+  accounts: (params) => saRequest(`/accounts${qs(params)}`),
+  account: (id) => saRequest(`/accounts/${id}`),
+  impersonate: (id) => saRequest(`/accounts/${id}/impersonate`, { method: "POST" }),
+};
+
+// Token jetable d'impersonation → stockage frontoffice (clé ticket_token) + arrêt.
+export function startImpersonation(token) {
+  localStorage.setItem("ticket_token", token); // session frontoffice (clé du frontoffice)
+}
+
+export const BUCKET_META = {
+  SAIN:         { label: "Sain",         color: "#1D9E75" },
+  A_SURVEILLER: { label: "À surveiller", color: "#c9933a" },
+  A_RISQUE:     { label: "À risque",     color: "#c66150" },
+};
+export const SEVERITY_META = {
+  high:   { label: "Élevé",  color: "#c66150" },
+  medium: { label: "Moyen",  color: "#c9933a" },
+  low:    { label: "Faible", color: "#6b7280" },
 };
 
 // Libellés des actions du journal d'audit.

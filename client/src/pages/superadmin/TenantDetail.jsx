@@ -7,7 +7,7 @@ import {
 } from "../../api/superadmin.js";
 import { Badge, Loading, ErrorBox } from "./ui.jsx";
 
-function InvoiceModal({ tenant, onClose, onDone }) {
+export function InvoiceModal({ tenant, onClose, onDone }) {
   const [amount, setAmount] = useState("");
   const [due, setDue] = useState("");
   const [notes, setNotes] = useState("");

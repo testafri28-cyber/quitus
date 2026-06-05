@@ -76,12 +76,12 @@ test.describe("Backoffice SaaS (éditeur) — authentification séparée", () =>
     await page.locator(".sa-login-card .btn-primary").click();
 
     await expect(page).toHaveURL(/\/superadmin$/);
-    await expect(page.getByRole("heading", { name: "Tableau de bord" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Cockpit" })).toBeVisible();
     await expect(page.locator(".sa-kpi", { hasText: "MRR" })).toBeVisible();
 
-    // Navigation vers les clients
-    await page.locator(".sa-nav", { hasText: "Clients" }).click();
-    await expect(page).toHaveURL(/\/superadmin\/tenants/);
+    // Navigation vers les comptes
+    await page.locator(".sa-nav", { hasText: "Comptes" }).click();
+    await expect(page).toHaveURL(/\/superadmin\/comptes/);
     await expect(page.locator(".sa-table")).toBeVisible();
   });
 
@@ -90,6 +90,6 @@ test.describe("Backoffice SaaS (éditeur) — authentification séparée", () =>
     await injectSuper(page, token);
     await page.goto("/superadmin");
     await expect(page.locator(".sa-side", { hasText: "Backoffice éditeur" })).toBeVisible();
-    await expect(page.locator(".sa-kpi", { hasText: "Clients actifs" })).toBeVisible();
+    await expect(page.locator(".sa-kpi", { hasText: "Comptes à risque" })).toBeVisible();
   });
 });

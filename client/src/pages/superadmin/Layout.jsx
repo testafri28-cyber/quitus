@@ -3,6 +3,7 @@ import { NavLink, Navigate, Outlet, useNavigate } from "react-router-dom";
 import { Icon } from "../../components/Icon.jsx";
 import { useSuperAuth } from "./SuperAuth.jsx";
 import { superadminApi } from "../../api/superadmin.js";
+import { QuitusMark } from "./QuitusMark.jsx";
 import "./superadmin.css";
 
 function AccountModal({ email, onClose }) {
@@ -48,10 +49,12 @@ function AccountModal({ email, onClose }) {
 }
 
 const NAV = [
-  { to: "/superadmin", end: true, icon: "grid", label: "Tableau de bord" },
-  { to: "/superadmin/tenants", icon: "inbox", label: "Clients" },
-  { to: "/superadmin/invoices", icon: "file", label: "Factures" },
-  { to: "/superadmin/revenue", icon: "sliders", label: "Revenus" },
+  { to: "/superadmin", end: true, icon: "grid", label: "Cockpit" },
+  { to: "/superadmin/comptes", icon: "inbox", label: "Comptes" },
+  { to: "/superadmin/invoices", icon: "file", label: "Facturation" },
+  { to: "/superadmin/adoption", icon: "check", label: "Adoption" },
+  { to: "/superadmin/sante", icon: "refresh", label: "Santé" },
+  { to: "/superadmin/confiance", icon: "lock", label: "Confiance" },
 ];
 
 export default function SuperadminLayout() {
@@ -72,7 +75,7 @@ export default function SuperadminLayout() {
 
       <aside className="sa-side">
         <div className="sa-brand">
-          <span className="sa-logo">Q</span>
+          <span className="sa-logo"><QuitusMark size={26} /></span>
           <span>
             <div className="sa-b-name">Quitus</div>
             <div className="sa-b-sub">Backoffice éditeur</div>

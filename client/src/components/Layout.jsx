@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Outlet, useLocation, useParams } from "react-router-dom";
 import { Sidebar } from "./Sidebar.jsx";
 import { Topbar } from "./Topbar.jsx";
+import { ImpersonationBanner } from "./ImpersonationBanner.jsx";
 import { ticketsApi } from "../api/endpoints.js";
 import { SPACE_META } from "../lib/spaces.js";
 
@@ -70,6 +71,7 @@ export function Layout() {
         <Topbar space={space} crumbs={crumbs} onMenu={() => setMobileOpen(true)} />
         <Outlet context={{ space }} />
       </div>
+      <ImpersonationBanner />
     </div>
   );
 }

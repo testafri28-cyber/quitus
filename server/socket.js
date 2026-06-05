@@ -7,10 +7,17 @@ import { allowedOrigins } from "./lib/cors.js";
 
 const PRESENCES = ["AVAILABLE", "UNAVAILABLE", "ON_LEAVE"];
 
+// Référence légère pour l'observabilité (backoffice → /system/health).
+let ioRef = null;
+export function socketConnectionCount() {
+  return ioRef ? ioRef.engine.clientsCount : 0;
+}
+
 export function initSocket(httpServer) {
   const io = new Server(httpServer, {
     cors: { origin: allowedOrigins, credentials: true },
   });
+  ioRef = io;
 
   // Présence en ligne : userId -> nombre de sockets connectés.
   const online = new Map();

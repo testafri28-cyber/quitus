@@ -122,11 +122,19 @@ Espace **séparé** du frontoffice, pour l'éditeur de Quitus.
   périmètre propre — un compte client ne donne **aucun** accès, et inversement.
 - **Compte de démo** (après `npm run seed:superadmin`) : `admin@quitus.ci` / `superadmin123`.
 
-Pages : **Tableau de bord** (clients actifs/essai/churn, MRR, essais expirants,
-paiements récents, activité récente), **Clients** (liste + filtres + création),
-**Détail client** (plan/statut, coordonnées, factures, paiements, génération de
-facture), **Factures** (filtres, encaissement → paiement, annulation), **Revenus**
-(MRR/ARR sur abonnements actifs, taux de churn, revenus par plan, graphe 6 mois).
+Pages (console d'opérateur, 6 modules) : **Cockpit** (file d'attention actionnable —
+impayés, fins d'essai, comptes à risque, escalades — + KPIs argent/risque, santé
+système et watchlist), **Comptes** (liste classée par **score de santé** + fiche
+**360°** : score 0–100 et ses 4 composantes usage/engagement/support/facturation,
+usage, factures, paiements, timeline, **consultation-en-tant-que**), **Facturation**
+(encaissement → paiement, annulation), **Revenus** (MRR/ARR sur abonnements actifs,
+churn, par plan, graphe 6 mois). Modules **Adoption / Santé / Confiance** en préparation.
+
+**Score de santé** : calculé (service pur `computeHealth`) à partir de signaux par
+compte (usage/engagement/support) + statut de facturation réel ; buckets Sain / À
+surveiller / À risque. **Consultation-en-tant-que** (impersonation) : ouvre le
+frontoffice via un jeton court à périmètre dédié, avec **bannière** côté client et
+**journal d'audit** (début/fin) — réservée aux comptes reliés à un utilisateur.
 
 Facturation en FCFA ; moyens de paiement : Wave, Orange Money, MTN MoMo, virement.
 Les prix des plans sont en base (table `PlanPrice`) et servent au calcul du MRR/ARR ;

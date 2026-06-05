@@ -196,6 +196,12 @@ a { color: inherit; }
 .ts-item .si-title { font-size: 13.5px; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ts-item .si-meta { font-size: 11.5px; color: var(--text-3); margin-top: 2px; }
 
+/* Bannière de consultation éditeur (impersonation) */
+.imp-banner { position: fixed; bottom: 0; left: 0; right: 0; z-index: 120; display: flex; align-items: center; justify-content: center; gap: 16px; padding: 9px 16px; background: #3C3489; color: #fff; font-size: 13.5px; box-shadow: 0 -2px 12px rgba(20,30,45,.18); }
+.imp-banner .imp-text strong { font-weight: 700; }
+.imp-banner .imp-quit { background: #fff; color: #3C3489; font-weight: 700; font-size: 13px; padding: 5px 14px; border-radius: 8px; }
+.imp-banner .imp-quit:hover { background: #ece9fb; }
+
 .notif { position: relative; }
 .notif-dot { position: absolute; top: 3px; right: 3px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 10px;
   background: var(--u-urgente); color: #fff; font-size: 10px; font-weight: 700; display: grid; place-items: center; line-height: 1; box-shadow: 0 0 0 2px var(--surface); }

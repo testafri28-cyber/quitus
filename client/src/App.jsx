@@ -20,11 +20,19 @@ import AdminGestion from "./pages/AdminGestion.jsx";
 import { SuperAuthProvider } from "./pages/superadmin/SuperAuth.jsx";
 import SaLogin from "./pages/superadmin/Login.jsx";
 import SuperadminLayout from "./pages/superadmin/Layout.jsx";
+import SaCockpit from "./pages/superadmin/Cockpit.jsx";
+import SaAccounts from "./pages/superadmin/Accounts.jsx";
+import SaAccount360 from "./pages/superadmin/Account360.jsx";
 import SaDashboard from "./pages/superadmin/Dashboard.jsx";
-import SaTenants from "./pages/superadmin/Tenants.jsx";
-import SaTenantDetail from "./pages/superadmin/TenantDetail.jsx";
 import SaInvoices from "./pages/superadmin/Invoices.jsx";
 import SaRevenue from "./pages/superadmin/Revenue.jsx";
+import SaStub from "./pages/superadmin/Stub.jsx";
+
+// Redirige l'ancien détail /tenants/:id vers la nouvelle fiche 360°.
+function TenantRedirect() {
+  const { id } = useParams();
+  return <Navigate to={`/superadmin/comptes/${id}`} replace />;
+}
 
 function HomeRedirect() {
   const { user, loading } = useAuth();
@@ -71,11 +79,19 @@ export default function App() {
       <Route element={<SuperAuthProvider><Outlet /></SuperAuthProvider>}>
         <Route path="/superadmin/login" element={<SaLogin />} />
         <Route path="/superadmin" element={<SuperadminLayout />}>
-          <Route index element={<SaDashboard />} />
-          <Route path="tenants" element={<SaTenants />} />
-          <Route path="tenants/:id" element={<SaTenantDetail />} />
+          <Route index element={<SaCockpit />} />
+          <Route path="comptes" element={<SaAccounts />} />
+          <Route path="comptes/:id" element={<SaAccount360 />} />
           <Route path="invoices" element={<SaInvoices />} />
           <Route path="revenue" element={<SaRevenue />} />
+          {/* Phase 2 — nav + routes stub */}
+          <Route path="adoption" element={<SaStub title="Adoption" desc="Activation, usage et expansion des comptes." />} />
+          <Route path="sante" element={<SaStub title="Santé & exploitation" desc="Disponibilité, incidents et exploitation technique." />} />
+          <Route path="confiance" element={<SaStub title="Confiance & contrôle" desc="Sécurité, audit et conformité." />} />
+          {/* Rétro-compatibilité (anciennes routes conservées) */}
+          <Route path="apercu" element={<SaDashboard />} />
+          <Route path="tenants" element={<Navigate to="/superadmin/comptes" replace />} />
+          <Route path="tenants/:id" element={<TenantRedirect />} />
         </Route>
       </Route>
 

@@ -3,8 +3,21 @@
    séparés du frontoffice. Réutilise les variables globales (index.css).
    ============================================================ */
 
+/* Marque ÉDITEUR Quitus — figée, indépendante du brand-kit thématisable par espace.
+   On gèle aussi --accent/--accent-ink dans le backoffice : tous les composants qui
+   utilisent --accent (boutons, focus, liens) prennent donc la marque éditeur, jamais
+   une couleur de tenant (bleu WCA / orange IDC). */
+.sa-app, .sa-login {
+  --qa-brand: #3C3489;             /* violet identité (logo/texte sur clair) */
+  --qa-brand-interactive: #6359C4; /* variante lisible clair ET sombre (actif/accents) */
+  --qa-accent: #1D9E75;            /* vert « validé / sain » */
+  --accent: #6359C4;
+  --accent-ink: #ffffff;
+}
+
 .sa-app { display: grid; grid-template-columns: 240px 1fr; height: 100vh; background: var(--bg); color: var(--text); }
 .sa-overlay { display: none; } /* visible seulement en mobile, tiroir ouvert (cf. media query) */
+.sa-logo svg { width: 60%; height: 60%; }
 
 /* ---- Login dédié au backoffice (visuellement distinct du client) ---- */
 .sa-login { min-height: 100vh; display: grid; place-items: center; padding: 24px; background: radial-gradient(130% 130% at 0% 0%, #232b3a, #161b26 62%); }
@@ -18,14 +31,14 @@
 /* ---- Sidebar (ardoise sombre, distincte du client) ---- */
 .sa-side { background: #161b26; color: #c7cfdc; display: flex; flex-direction: column; padding: 18px 14px; gap: 4px; }
 .sa-brand { display: flex; align-items: center; gap: 11px; padding: 6px 8px 18px; }
-.sa-brand .sa-logo { width: 40px; height: 40px; border-radius: 11px; background: #6e62b6; color: #fff; display: grid; place-items: center; font-weight: 800; font-size: 15px; flex-shrink: 0; }
+.sa-brand .sa-logo { width: 40px; height: 40px; border-radius: 11px; background: #fff; display: grid; place-items: center; flex-shrink: 0; box-shadow: 0 1px 3px rgba(0,0,0,.25); }
 .sa-brand .sa-b-name { font-weight: 700; font-size: 15px; color: #fff; line-height: 1.1; }
 .sa-brand .sa-b-sub { font-size: 11px; color: #8a93a5; }
 .sa-navlabel { font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #6b7486; padding: 12px 10px 6px; }
 .sa-nav { display: flex; align-items: center; gap: 11px; padding: 10px 11px; border-radius: 9px; color: #c7cfdc; font-weight: 500; font-size: 14px; width: 100%; text-align: left; transition: background .14s, color .14s; }
 .sa-nav svg { width: 18px; height: 18px; flex-shrink: 0; }
 .sa-nav:hover { background: #1f2632; color: #fff; }
-.sa-nav.active { background: #6e62b6; color: #fff; }
+.sa-nav.active { background: var(--qa-brand-interactive); color: #fff; }
 .sa-side-foot { margin-top: auto; border-top: 1px solid #232b39; padding-top: 12px; }
 .sa-user { font-size: 12.5px; color: #8a93a5; padding: 4px 10px 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sa-logout { display: flex; align-items: center; gap: 9px; width: 100%; padding: 9px 11px; border-radius: 9px; color: #c7cfdc; font-size: 13.5px; transition: background .14s; }
@@ -103,6 +116,33 @@
 
 /* ---- Chart ---- */
 .sa-chart { width: 100%; height: 260px; }
+
+/* ---- Cockpit : file d'attention ---- */
+.sa-queue-item { display: flex; align-items: center; gap: 11px; width: 100%; text-align: left; padding: 11px 4px; border-bottom: 1px solid var(--border); transition: background .12s; }
+.sa-queue-item:last-child { border-bottom: none; }
+.sa-queue-item:hover { background: var(--surface-2); }
+.sa-queue-item .sa-sev { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.sa-queue-body { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.sa-queue-label { font-weight: 600; font-size: 13.5px; }
+.sa-queue-detail { font-size: 12.5px; color: var(--text-3); margin-top: 1px; }
+
+/* ---- Cockpit : santé système ---- */
+.sa-sys-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+.sa-sys-row:last-child { border-bottom: none; }
+.sa-sys-row span { color: var(--text-2); }
+.sa-sys-row b { font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
+
+/* ---- Cockpit : watchlist ---- */
+.sa-watch { display: flex; align-items: center; gap: 12px; padding: 9px 4px; border-bottom: 1px solid var(--border); }
+.sa-watch:last-child { border-bottom: none; }
+.sa-watch:hover { background: var(--surface-2); }
+.sa-watch-score { width: 40px; height: 40px; border-radius: 10px; border: 1.5px solid; display: grid; place-items: center; font-weight: 800; font-size: 14px; flex-shrink: 0; }
+.sa-watch-body { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.sa-watch-sub { font-size: 12px; font-weight: 600; }
+
+/* ---- Pastille de score (liste comptes) ---- */
+.sa-score-pill { display: inline-flex; align-items: baseline; gap: 1px; padding: 3px 9px; border-radius: 20px; border: 1px solid; font-size: 12px; }
+.sa-score-pill b { font-size: 14px; font-weight: 800; }
 
 /* ---- Responsive ---- */
 @media (max-width: 860px) {
