@@ -358,7 +358,10 @@ a { color: inherit; }
 .filter-btn.active { border-color: var(--accent); color: var(--accent-text); background: var(--accent-softer); }
 .filter-btn svg { width:15px; height:15px; }
 .filter-btn .fb-count { background: var(--accent); color: var(--accent-ink); font-size:11px; border-radius:20px; padding: 0 6px; font-weight:700; }
-.filter-menu { position:absolute; top: calc(100% + 7px); left:0; z-index: 25; min-width: 190px; background: var(--surface); border:1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-lg); padding: 6px; }
+.filter-menu { position:absolute; top: calc(100% + 7px); left:0; z-index: 25; min-width: 190px; max-height: 60vh; overflow-y: auto; background: var(--surface); border:1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-lg); padding: 6px; }
+/* Ouverture vers le haut / alignée à droite (positionnement adaptatif, cf. FilterDropdown) */
+.filter-menu.up { top: auto; bottom: calc(100% + 7px); }
+.filter-menu.right { left: auto; right: 0; }
 .filter-opt { display:flex; align-items:center; gap:10px; width:100%; padding:8px 9px; border-radius: var(--radius-sm); text-align:left; font-size:13.5px; transition: background .12s; }
 .filter-opt:hover { background: var(--surface-2); }
 .filter-opt .fo-check { width:16px; height:16px; border-radius: 4px; border:1.5px solid var(--border-strong); display:grid; place-items:center; color:transparent; flex-shrink:0; }

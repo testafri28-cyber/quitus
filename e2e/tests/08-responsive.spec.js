@@ -91,6 +91,25 @@ test.describe("Responsive (mobile)", () => {
     expect(await inViewport(acct), "modale Mon compte dans l'écran").toBeTruthy();
   });
 
+  test("le filtre « Type » ouvert garde toutes ses options dans l'écran (petit téléphone)", async ({ page, request }) => {
+    await page.setViewportSize({ width: 360, height: 640 }); // hauteur où le menu se collait au bas
+    const { token } = await apiAuth(request, USERS.boti);
+    await authPage(page, token);
+    await page.goto("/global/dashboard");
+
+    await page.locator(".filter-btn", { hasText: "Type" }).click();
+    const opts = page.locator(".filter-menu .filter-opt");
+    const n = await opts.count();
+    expect(n).toBeGreaterThan(0);
+    for (let i = 0; i < n; i++) {
+      const ok = await opts.nth(i).evaluate((el) => {
+        const r = el.getBoundingClientRect();
+        return r.top >= 0 && r.bottom <= window.innerHeight && r.left >= 0 && r.right <= window.innerWidth;
+      });
+      expect(ok, `option de filtre ${i} entièrement visible`).toBeTruthy();
+    }
+  });
+
   test("en-tête de discussion : les actions de gestion restent dans l'écran", async ({ page, request }) => {
     const { token } = await apiAuth(request, USERS.boti); // responsable IT → salon géré
     await authPage(page, token);

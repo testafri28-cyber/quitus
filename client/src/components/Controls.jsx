@@ -66,23 +66,39 @@ export function ServicePicker({ departments, value, onChange, space }) {
 // Filtre déroulant multi-sélection
 export function FilterDropdown({ label, icon, options, selected, onToggle }) {
   const [open, setOpen] = useState(false);
+  // Position adaptative : ouvre vers le haut si peu de place dessous, aligne à droite
+  // si le menu déborderait à droite (évite que des options sortent de l'écran).
+  const [pos, setPos] = useState({ up: false, right: false });
   const ref = useRef(null);
   useEffect(() => {
     const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
   }, []);
+
+  const toggle = () => {
+    if (!open && ref.current) {
+      const r = ref.current.getBoundingClientRect();
+      const below = window.innerHeight - r.bottom;
+      setPos({
+        up: below < 260 && r.top > below,                 // pas la place en bas → ouvrir en haut
+        right: r.left + 210 > window.innerWidth,           // déborderait à droite → aligner à droite
+      });
+    }
+    setOpen((v) => !v);
+  };
+
   const count = selected.length;
   return (
     <div className="filter" ref={ref}>
-      <button className={"filter-btn" + (count ? " active" : "")} onClick={() => setOpen((v) => !v)}>
+      <button className={"filter-btn" + (count ? " active" : "")} onClick={toggle}>
         <Icon name={icon || "filter"} />
         {label}
         {count > 0 && <span className="fb-count">{count}</span>}
         <Icon name="chevDown" style={{ width: 14, height: 14 }} />
       </button>
       {open && (
-        <div className="filter-menu fade-in">
+        <div className={"filter-menu fade-in" + (pos.up ? " up" : "") + (pos.right ? " right" : "")}>
           {options.map((o) => (
             <button key={o.key} className={"filter-opt" + (selected.includes(o.key) ? " on" : "")} onClick={() => onToggle(o.key)}>
               <span className="fo-check"><Icon name="check" style={{ width: 12, height: 12 }} /></span>
