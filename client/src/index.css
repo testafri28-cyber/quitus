@@ -450,6 +450,15 @@ a { color: inherit; }
   .stepper-card { padding: 18px 14px; }
   .stepper .step-label { font-size: 10.5px; }
 }
+/* Récapitulatif de profil (modale Mon compte) — bordures internes par cellule
+   (pas d'overflow:hidden, sinon la grille devient compressible et la 2e ligne est rognée). */
+.acct-grid { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.acct-cell { padding: 11px 13px; min-width: 0; border-top: 1px solid var(--border); border-left: 1px solid var(--border); }
+.acct-cell:nth-child(1), .acct-cell:nth-child(2) { border-top: none; }
+.acct-cell:nth-child(odd) { border-left: none; }
+.acct-cell .ac-k { font-size: 10.5px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--text-3); margin-bottom: 3px; }
+.acct-cell .ac-v { font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 .meta-cell { background: var(--surface); padding: 14px 16px; }
 .meta-cell .mc-label { font-size: 11px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color: var(--text-3); margin-bottom: 8px; }
 .section-label { font-size: 12px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color: var(--text-3); margin: 0 0 12px; }

@@ -27,6 +27,8 @@ function publicUser(user) {
     department: user.department
       ? { id: user.department.id, name: user.department.name, code: user.department.code }
       : null,
+    presence: user.presence,
+    createdAt: user.createdAt,
   };
 }
 
@@ -70,6 +72,25 @@ router.get("/me", requireAuth, async (req, res, next) => {
       include: { department: true, company: true },
     });
     if (!user) return res.status(404).json({ error: "Utilisateur introuvable." });
+    res.json({ user: publicUser(user) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// PATCH /api/auth/profile — l'utilisateur modifie son propre nom d'affichage
+const profileSchema = z.object({
+  name: z.string().trim().min(2, "Le nom doit faire au moins 2 caractères.").max(80, "Nom trop long."),
+});
+router.patch("/profile", requireAuth, async (req, res, next) => {
+  try {
+    const parsed = profileSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0].message });
+    const user = await prisma.user.update({
+      where: { id: req.user.id },
+      data: { name: parsed.data.name },
+      include: { department: true, company: true },
+    });
     res.json({ user: publicUser(user) });
   } catch (err) {
     next(err);
