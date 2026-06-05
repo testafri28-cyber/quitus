@@ -25,6 +25,11 @@ base). On déploie donc :
    `prisma migrate deploy`) puis démarre avec `npm start`.
 4. **Seed initial (une fois)** : service `quitus-api` → **Shell** → `npm run seed`.
    ⚠️ À ne lancer qu'une fois : le seed réinitialise les données de démonstration.
+   Les migrations (frontoffice **et** backoffice) sont appliquées automatiquement par
+   `prisma migrate deploy` au build — aucune action manuelle.
+5. **Backoffice éditeur (optionnel)** : pour créer le compte éditeur et des clients de
+   démo → **Shell** → `npm run seed:superadmin` (compte `admin@quitus.ci`). À réserver
+   à un environnement de démo : ce seed réinitialise les tenants/factures/paiements.
 
 ### Option B — manuel
 - New → **PostgreSQL** (plan free) → copier l'**Internal Database URL**.
