@@ -41,6 +41,8 @@ const loginLimiter = rateLimit({
   message: { error: "Trop de tentatives de connexion. Réessayez dans quelques minutes." },
 });
 app.use("/api/auth/login", loginLimiter);
+// Même protection anti-brute-force sur la connexion du backoffice éditeur.
+app.use("/api/superadmin/auth/login", loginLimiter);
 
 // Fichiers uploadés (disque local en dev ; disque persistant ou stockage objet en prod).
 app.use("/uploads", express.static(UPLOAD_DIR));

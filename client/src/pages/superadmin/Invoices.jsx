@@ -62,6 +62,11 @@ export default function SaInvoices() {
   }, [status]);
   useEffect(() => { load(); }, [load]);
 
+  const cancelInvoice = async (inv) => {
+    if (!window.confirm(`Annuler la facture de ${inv.tenant?.name} ?`)) return;
+    try { await superadminApi.cancelInvoice(inv.id); load(); } catch (e) { setErr(e.message); }
+  };
+
   return (
     <div className="sa-page">
       <div className="sa-head">
@@ -103,9 +108,12 @@ export default function SaInvoices() {
                   <td><Badge meta={INVOICE_STATUS_META[inv.status]} /></td>
                   <td>{shortDate(inv.due_date)}</td>
                   <td>{inv.paid_at ? shortDate(inv.paid_at) : "—"}</td>
-                  <td style={{ textAlign: "right" }}>
+                  <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
                     {inv.status !== "PAID" && inv.status !== "CANCELLED" && (
-                      <button className="btn btn-subtle btn-sm" onClick={() => setPaying(inv)}><Icon name="check" />Marquer payée</button>
+                      <span style={{ display: "inline-flex", gap: 6 }}>
+                        <button className="btn btn-subtle btn-sm" onClick={() => setPaying(inv)}><Icon name="check" />Marquer payée</button>
+                        <button className="btn btn-ghost btn-sm" title="Annuler la facture" onClick={() => cancelInvoice(inv)}><Icon name="x" /></button>
+                      </span>
                     )}
                   </td>
                 </tr>

@@ -26,7 +26,13 @@ async function main() {
   });
   console.log(`• Compte éditeur (SuperAdmin) : ${admin.email} / ${SUPER_PASSWORD}`);
 
-  // 2) Réinitialise les données de démo du backoffice (idempotent)
+  // 2) Catalogue tarifaire des plans (prix mensuel FCFA) — base du calcul MRR/ARR.
+  for (const [plan, price] of Object.entries(PLAN_PRICE)) {
+    await prisma.planPrice.upsert({ where: { plan }, update: { monthly_fcfa: price }, create: { plan, monthly_fcfa: price } });
+  }
+
+  // 3) Réinitialise les données de démo du backoffice (idempotent)
+  await prisma.superAdminAudit.deleteMany({});
   await prisma.payment.deleteMany({});
   await prisma.invoice.deleteMany({});
   await prisma.tenant.deleteMany({});
@@ -50,6 +56,7 @@ async function main() {
     data: {
       name: "Ancien client", plan: "PME", status: "CHURNED", billing_cycle: "MONTHLY",
       contact_email: "contact@ancien-client.ci", contact_phone: "+225 07 00 00 00 03",
+      churned_at: monthsAgo(3),
     },
   });
 

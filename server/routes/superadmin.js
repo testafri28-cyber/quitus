@@ -39,13 +39,54 @@ const METHODS = ["WAVE", "ORANGE_MONEY", "MTN_MOMO", "BANK_TRANSFER"];
 
 const monthStart = (d = new Date()) => new Date(d.getFullYear(), d.getMonth(), 1);
 
+// Journal d'audit (append-only) — qui a fait quoi dans le backoffice.
+async function logAudit(req, action, detail) {
+  try {
+    await prisma.superAdminAudit.create({
+      data: { admin_id: req.superAdmin.id, admin_email: req.superAdmin.email, action, detail: detail || null },
+    });
+  } catch (e) { /* l'audit ne doit jamais bloquer l'action */ }
+}
+
+// Bascule paresseuse : les factures en attente dont l'échéance est dépassée passent OVERDUE.
+async function markOverdue() {
+  await prisma.invoice.updateMany({
+    where: { status: "PENDING", due_date: { lt: new Date() } },
+    data: { status: "OVERDUE" },
+  });
+}
+
+// Carte des prix mensuels par plan (FCFA), depuis la base.
+async function planPriceMap() {
+  const rows = await prisma.planPrice.findMany();
+  const map = {};
+  for (const r of rows) map[r.plan] = r.monthly_fcfa;
+  return map;
+}
+
+// MRR = somme des prix mensuels des abonnements ACTIFS (vrai revenu récurrent).
+async function computeMrr(priceMap) {
+  const actives = await prisma.tenant.groupBy({ by: ["plan"], where: { status: "ACTIVE" }, _count: { _all: true } });
+  let mrr = 0;
+  const byPlan = {};
+  for (const row of actives) {
+    const price = priceMap[row.plan] || 0;
+    const amount = price * row._count._all;
+    mrr += amount;
+    byPlan[row.plan] = amount;
+  }
+  return { mrr, byPlan };
+}
+
 /* ---------------- Dashboard ---------------- */
 router.get("/stats", async (_req, res, next) => {
   try {
     const now = new Date();
     const in7 = new Date(now.getTime() + 7 * 86400000);
+    await markOverdue();
+    const priceMap = await planPriceMap();
 
-    const [byStatus, mrrAgg, trialEndingSoon, recentPayments] = await Promise.all([
+    const [byStatus, collectedAgg, trialEndingSoon, recentPayments, recentAudit] = await Promise.all([
       prisma.tenant.groupBy({ by: ["status"], _count: { _all: true } }),
       prisma.payment.aggregate({ _sum: { amount_fcfa: true }, where: { paid_at: { gte: monthStart(now) } } }),
       prisma.tenant.findMany({
@@ -53,20 +94,24 @@ router.get("/stats", async (_req, res, next) => {
         orderBy: { trial_ends_at: "asc" },
       }),
       prisma.payment.findMany({
-        take: 8,
+        take: 6,
         orderBy: { paid_at: "desc" },
         include: { tenant: { select: { id: true, name: true, plan: true } } },
       }),
+      prisma.superAdminAudit.findMany({ take: 6, orderBy: { created_at: "desc" } }),
     ]);
 
     const counts = { total: 0, TRIAL: 0, ACTIVE: 0, SUSPENDED: 0, CHURNED: 0 };
     for (const row of byStatus) { counts[row.status] = row._count._all; counts.total += row._count._all; }
+    const { mrr } = await computeMrr(priceMap);
 
     res.json({
       tenants: { total: counts.total, active: counts.ACTIVE, trial: counts.TRIAL, suspended: counts.SUSPENDED, churned: counts.CHURNED },
-      mrr: mrrAgg._sum.amount_fcfa || 0,
+      mrr,                                                  // revenu récurrent (abonnements actifs)
+      collectedThisMonth: collectedAgg._sum.amount_fcfa || 0, // réellement encaissé ce mois
       trialEndingSoon,
       recentPayments,
+      recentAudit,
     });
   } catch (err) { next(err); }
 });
@@ -113,14 +158,17 @@ router.post("/tenants", async (req, res, next) => {
         billing_cycle: d.billing_cycle,
         trial_ends_at: d.trial_ends_at ? new Date(d.trial_ends_at) : (d.status === "TRIAL" ? new Date(Date.now() + 14 * 86400000) : null),
         next_renewal: d.next_renewal ? new Date(d.next_renewal) : null,
+        churned_at: d.status === "CHURNED" ? new Date() : null,
       },
     });
+    await logAudit(req, "tenant.create", `Client « ${tenant.name} » créé (${tenant.plan}/${tenant.status})`);
     res.status(201).json({ tenant });
   } catch (err) { next(err); }
 });
 
 router.get("/tenants/:id", async (req, res, next) => {
   try {
+    await markOverdue();
     const tenant = await prisma.tenant.findUnique({
       where: { id: req.params.id },
       include: {
@@ -155,8 +203,20 @@ router.patch("/tenants/:id", async (req, res, next) => {
     if (d.next_renewal !== undefined) data.next_renewal = d.next_renewal ? new Date(d.next_renewal) : null;
     // Sortie de trial : on efface l'échéance d'essai.
     if (d.status && d.status !== "TRIAL") data.trial_ends_at = null;
+    // Suivi du churn : on horodate le passage à CHURNED (et on l'efface si réactivation).
+    if (d.status === "CHURNED") data.churned_at = new Date();
+    else if (d.status && d.status !== "CHURNED") data.churned_at = null;
 
+    const before = await prisma.tenant.findUnique({ where: { id: req.params.id }, select: { plan: true, status: true } });
     const tenant = await prisma.tenant.update({ where: { id: req.params.id }, data });
+
+    // Audit lisible des changements significatifs.
+    const changes = [];
+    if (d.plan && before && d.plan !== before.plan) changes.push(`plan ${before.plan}→${d.plan}`);
+    if (d.status && before && d.status !== before.status) changes.push(`statut ${before.status}→${d.status}`);
+    if (d.name || d.contact_email || d.contact_phone !== undefined) changes.push("coordonnées");
+    if (changes.length) await logAudit(req, "tenant.update", `« ${tenant.name} » : ${changes.join(", ")}`);
+
     res.json({ tenant });
   } catch (err) {
     if (err.code === "P2025") return res.status(404).json({ error: "Client introuvable." });
@@ -184,6 +244,7 @@ router.post("/tenants/:id/invoices", async (req, res, next) => {
         notes: parsed.data.notes || null,
       },
     });
+    await logAudit(req, "invoice.create", `Facture ${invoice.amount_fcfa} FCFA pour « ${tenant.name} »`);
     res.status(201).json({ invoice });
   } catch (err) { next(err); }
 });
@@ -191,6 +252,7 @@ router.post("/tenants/:id/invoices", async (req, res, next) => {
 /* ---------------- Invoices ---------------- */
 router.get("/invoices", async (req, res, next) => {
   try {
+    await markOverdue();
     const { status } = req.query;
     const where = {};
     if (status && INVOICE_STATUSES.includes(status)) where.status = status;
@@ -228,7 +290,56 @@ router.patch("/invoices/:id/pay", async (req, res, next) => {
         },
       }),
     ]);
+    await logAudit(req, "invoice.pay", `Facture ${invoice.amount_fcfa} FCFA encaissée (${parsed.data.method})`);
     res.json({ invoice: updated, payment });
+  } catch (err) { next(err); }
+});
+
+// Annuler une facture (uniquement si non payée).
+router.patch("/invoices/:id/cancel", async (req, res, next) => {
+  try {
+    const invoice = await prisma.invoice.findUnique({ where: { id: req.params.id } });
+    if (!invoice) return res.status(404).json({ error: "Facture introuvable." });
+    if (invoice.status === "PAID") return res.status(409).json({ error: "Une facture payée ne peut être annulée." });
+    if (invoice.status === "CANCELLED") return res.json({ invoice });
+    const updated = await prisma.invoice.update({ where: { id: invoice.id }, data: { status: "CANCELLED" } });
+    await logAudit(req, "invoice.cancel", `Facture ${invoice.amount_fcfa} FCFA annulée`);
+    res.json({ invoice: updated });
+  } catch (err) { next(err); }
+});
+
+/* ---------------- Compte éditeur : changer son mot de passe ---------------- */
+const pwdSchema = z.object({
+  currentPassword: z.string().min(1, "Mot de passe actuel requis."),
+  newPassword: z.string().min(8, "Le nouveau mot de passe doit faire au moins 8 caractères."),
+});
+router.patch("/auth/password", async (req, res, next) => {
+  try {
+    const parsed = pwdSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0].message });
+    const admin = await prisma.superAdmin.findUnique({ where: { id: req.superAdmin.id } });
+    if (!admin || !(await bcrypt.compare(parsed.data.currentPassword, admin.passwordHash))) {
+      return res.status(400).json({ error: "Mot de passe actuel incorrect." });
+    }
+    const passwordHash = await bcrypt.hash(parsed.data.newPassword, 10);
+    await prisma.superAdmin.update({ where: { id: admin.id }, data: { passwordHash } });
+    res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+/* ---------------- Catalogue tarifaire + journal d'audit ---------------- */
+router.get("/plans", async (_req, res, next) => {
+  try {
+    const rows = await prisma.planPrice.findMany();
+    const map = Object.fromEntries(rows.map((r) => [r.plan, r.monthly_fcfa]));
+    res.json({ plans: PLANS.map((plan) => ({ plan, monthly_fcfa: map[plan] || 0 })) });
+  } catch (err) { next(err); }
+});
+
+router.get("/audit", async (_req, res, next) => {
+  try {
+    const entries = await prisma.superAdminAudit.findMany({ take: 50, orderBy: { created_at: "desc" } });
+    res.json({ entries });
   } catch (err) { next(err); }
 });
 
@@ -236,23 +347,27 @@ router.patch("/invoices/:id/pay", async (req, res, next) => {
 router.get("/revenue", async (_req, res, next) => {
   try {
     const now = new Date();
+    const mStart = monthStart(now);
     const sixAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1); // début du 6e mois en arrière
 
-    const [mrrAgg, paymentsByPlan, churnCount, recentPayments] = await Promise.all([
-      prisma.payment.aggregate({ _sum: { amount_fcfa: true }, where: { paid_at: { gte: monthStart(now) } } }),
-      prisma.payment.findMany({ select: { amount_fcfa: true, tenant: { select: { plan: true } } } }),
-      prisma.tenant.count({ where: { status: "CHURNED" } }),
+    const priceMap = await planPriceMap();
+    const { mrr, byPlan: mrrByPlan } = await computeMrr(priceMap);
+
+    const [collectedAgg, churnedThisMonth, activeCount, recentPayments] = await Promise.all([
+      prisma.payment.aggregate({ _sum: { amount_fcfa: true }, where: { paid_at: { gte: mStart } } }),
+      prisma.tenant.count({ where: { status: "CHURNED", churned_at: { gte: mStart } } }),
+      prisma.tenant.count({ where: { status: "ACTIVE" } }),
       prisma.payment.findMany({ where: { paid_at: { gte: sixAgo } }, select: { amount_fcfa: true, paid_at: true } }),
     ]);
 
-    const mrr = mrrAgg._sum.amount_fcfa || 0;
+    // MRR récurrent par plan (abonnements actifs × prix).
+    const byPlan = PLANS.map((plan) => ({ plan, amount: mrrByPlan[plan] || 0 }));
 
-    // Revenus cumulés par plan (d'après le plan courant du client).
-    const byPlanMap = { STARTER: 0, ESSENTIEL: 0, PME: 0, ENTERPRISE: 0 };
-    for (const p of paymentsByPlan) { const pl = p.tenant?.plan; if (pl && byPlanMap[pl] != null) byPlanMap[pl] += p.amount_fcfa; }
-    const byPlan = PLANS.map((plan) => ({ plan, amount: byPlanMap[plan] }));
+    // Taux de churn du mois : partis ce mois / (actifs + partis ce mois).
+    const churnBase = activeCount + churnedThisMonth;
+    const churnRate = churnBase > 0 ? Math.round((churnedThisMonth / churnBase) * 1000) / 10 : 0;
 
-    // Paiements des 6 derniers mois (libellé YYYY-MM).
+    // Paiements encaissés sur 6 mois (libellé YYYY-MM).
     const series = [];
     for (let i = 5; i >= 0; i--) {
       const m = new Date(now.getFullYear(), now.getMonth() - i, 1);
@@ -265,7 +380,15 @@ router.get("/revenue", async (_req, res, next) => {
       if (idx[key] != null) series[idx[key]].total += p.amount_fcfa;
     }
 
-    res.json({ mrr, arr: mrr * 12, byPlan, churnThisMonth: churnCount, payments6months: series });
+    res.json({
+      mrr,
+      arr: mrr * 12,
+      collectedThisMonth: collectedAgg._sum.amount_fcfa || 0,
+      byPlan,
+      churnThisMonth: churnedThisMonth,
+      churnRate,
+      payments6months: series,
+    });
   } catch (err) { next(err); }
 });
 

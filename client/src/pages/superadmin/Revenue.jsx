@@ -36,7 +36,7 @@ export default function SaRevenue() {
         <div className="sa-kpi">
           <div className="sa-k-label"><Icon name="sliders" />MRR</div>
           <div className="sa-k-val sm">{fcfa(data.mrr)}</div>
-          <div className="sa-k-hint">revenu récurrent mensuel</div>
+          <div className="sa-k-hint">revenu récurrent (abonnements actifs)</div>
         </div>
         <div className="sa-kpi">
           <div className="sa-k-label"><Icon name="refresh" />ARR</div>
@@ -44,14 +44,14 @@ export default function SaRevenue() {
           <div className="sa-k-hint">annualisé (MRR × 12)</div>
         </div>
         <div className="sa-kpi">
-          <div className="sa-k-label"><Icon name="x" />Churn</div>
-          <div className="sa-k-val">{data.churnThisMonth}</div>
-          <div className="sa-k-hint">clients partis (CHURNED)</div>
+          <div className="sa-k-label"><Icon name="x" />Churn du mois</div>
+          <div className="sa-k-val">{data.churnThisMonth}<span style={{ fontSize: 15, color: "var(--text-3)", fontWeight: 600 }}> · {data.churnRate}%</span></div>
+          <div className="sa-k-hint">clients partis ce mois</div>
         </div>
         <div className="sa-kpi">
-          <div className="sa-k-label"><Icon name="check" />Encaissé (6 mois)</div>
-          <div className="sa-k-val sm">{fcfa(data.payments6months.reduce((s, m) => s + m.total, 0))}</div>
-          <div className="sa-k-hint">somme des paiements</div>
+          <div className="sa-k-label"><Icon name="check" />Encaissé ce mois</div>
+          <div className="sa-k-val sm">{fcfa(data.collectedThisMonth)}</div>
+          <div className="sa-k-hint">paiements réellement reçus</div>
         </div>
       </div>
 
@@ -76,9 +76,9 @@ export default function SaRevenue() {
         </div>
 
         <div className="sa-card sa-card-pad">
-          <h2 className="sa-card-h">Revenus par plan</h2>
+          <h2 className="sa-card-h">MRR par plan</h2>
           {data.byPlan.every((b) => b.amount === 0) ? (
-            <div className="sa-empty" style={{ padding: "30px 0" }}>Aucun revenu enregistré.</div>
+            <div className="sa-empty" style={{ padding: "30px 0" }}>Aucun abonnement actif.</div>
           ) : (
             data.byPlan.map((b) => {
               const meta = PLAN_META[b.plan];

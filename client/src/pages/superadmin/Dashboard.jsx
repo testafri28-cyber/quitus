@@ -1,10 +1,17 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Icon } from "../../components/Icon.jsx";
-import { superadminApi, PLAN_META, fcfa, shortDate } from "../../api/superadmin.js";
+import { superadminApi, PLAN_META, AUDIT_LABEL, fcfa, shortDate } from "../../api/superadmin.js";
 import { Badge, Loading, ErrorBox } from "./ui.jsx";
 
 const daysLeft = (iso) => Math.max(0, Math.ceil((new Date(iso) - Date.now()) / 86400000));
+const relTime = (iso) => {
+  const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
+  if (s < 60) return "à l'instant";
+  const m = Math.floor(s / 60); if (m < 60) return `il y a ${m} min`;
+  const h = Math.floor(m / 60); if (h < 24) return `il y a ${h} h`;
+  return `il y a ${Math.floor(h / 24)} j`;
+};
 
 export default function SaDashboard() {
   const [data, setData] = useState(null);
@@ -45,9 +52,9 @@ export default function SaDashboard() {
           <div className="sa-k-hint">{t.suspended} suspendu(s)</div>
         </div>
         <div className="sa-kpi">
-          <div className="sa-k-label"><Icon name="sliders" />MRR du mois</div>
+          <div className="sa-k-label"><Icon name="sliders" />MRR</div>
           <div className="sa-k-val sm">{fcfa(data.mrr)}</div>
-          <div className="sa-k-hint">paiements encaissés ce mois</div>
+          <div className="sa-k-hint">abonnements actifs · {fcfa(data.collectedThisMonth)} encaissés ce mois</div>
         </div>
       </div>
 
@@ -89,6 +96,21 @@ export default function SaDashboard() {
           )}
         </div>
       </div>
+
+      {data.recentAudit?.length > 0 && (
+        <div className="sa-card sa-card-pad" style={{ marginTop: 18 }}>
+          <h2 className="sa-card-h">Activité récente du backoffice</h2>
+          {data.recentAudit.map((a) => (
+            <div key={a.id} className="spread" style={{ padding: "9px 0", borderBottom: "1px solid var(--border)" }}>
+              <div>
+                <span style={{ fontWeight: 600, fontSize: 13.5 }}>{AUDIT_LABEL[a.action] || a.action}</span>
+                <span className="muted" style={{ fontSize: 13 }}> — {a.detail}</span>
+              </div>
+              <span className="sa-mono" style={{ whiteSpace: "nowrap" }}>{relTime(a.created_at)}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

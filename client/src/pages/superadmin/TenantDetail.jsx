@@ -62,6 +62,8 @@ export default function SaTenantDetail() {
   const [err, setErr] = useState("");
   const [invModal, setInvModal] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState({ name: "", contact_email: "", contact_phone: "" });
 
   const load = useCallback(() => {
     superadminApi.tenant(id).then((d) => setTenant(d.tenant)).catch((e) => setErr(e.message));
@@ -74,6 +76,19 @@ export default function SaTenantDetail() {
     catch (e) { setErr(e.message); } finally { setSaving(false); }
   };
 
+  const startEdit = () => { setForm({ name: tenant.name, contact_email: tenant.contact_email, contact_phone: tenant.contact_phone || "" }); setEditing(true); };
+  const saveContact = async () => {
+    setSaving(true); setErr("");
+    try {
+      await superadminApi.updateTenant(id, { name: form.name.trim(), contact_email: form.contact_email.trim(), contact_phone: form.contact_phone.trim() || null });
+      setEditing(false); load();
+    } catch (e) { setErr(e.message); } finally { setSaving(false); }
+  };
+  const cancelInvoice = async (inv) => {
+    if (!window.confirm(`Annuler la facture de ${inv.amount_fcfa.toLocaleString("fr-FR")} FCFA ?`)) return;
+    try { await superadminApi.cancelInvoice(inv.id); load(); } catch (e) { setErr(e.message); }
+  };
+
   if (err && !tenant) return <div className="sa-page"><ErrorBox message={err} /></div>;
   if (!tenant) return <div className="sa-page"><Loading /></div>;
 
@@ -84,11 +99,25 @@ export default function SaTenantDetail() {
       <button className="sa-back" onClick={() => navigate("/superadmin/tenants")}><Icon name="arrowLeft" />Retour aux clients</button>
 
       <div className="sa-head">
-        <div>
-          <h1 className="sa-h1">{tenant.name}</h1>
-          <p className="sa-sub">{tenant.contact_email}{tenant.contact_phone ? ` · ${tenant.contact_phone}` : ""}</p>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {editing ? (
+            <div style={{ maxWidth: 420 }}>
+              <input className="input" style={{ marginBottom: 8 }} value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="Nom du client" />
+              <input className="input" style={{ marginBottom: 8 }} type="email" value={form.contact_email} onChange={(e) => setForm((f) => ({ ...f, contact_email: e.target.value }))} placeholder="E-mail de contact" />
+              <input className="input" value={form.contact_phone} onChange={(e) => setForm((f) => ({ ...f, contact_phone: e.target.value }))} placeholder="Téléphone" />
+              <div className="row" style={{ gap: 8, marginTop: 10 }}>
+                <button className="btn btn-primary btn-sm" onClick={saveContact} disabled={saving}>Enregistrer</button>
+                <button className="btn btn-ghost btn-sm" onClick={() => setEditing(false)}>Annuler</button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <h1 className="sa-h1">{tenant.name}</h1>
+              <p className="sa-sub">{tenant.contact_email}{tenant.contact_phone ? ` · ${tenant.contact_phone}` : ""} · <button className="sa-link" onClick={startEdit} style={{ font: "inherit" }}>Modifier les coordonnées</button></p>
+            </>
+          )}
         </div>
-        <button className="btn btn-primary" onClick={() => setInvModal(true)}><Icon name="file" />Générer une facture</button>
+        {!editing && <button className="btn btn-primary" onClick={() => setInvModal(true)}><Icon name="file" />Générer une facture</button>}
       </div>
 
       <ErrorBox message={err} />
@@ -133,7 +162,7 @@ export default function SaTenantDetail() {
         ) : (
           <div className="sa-table-wrap" style={{ border: "none", boxShadow: "none" }}>
             <table className="sa-table">
-              <thead><tr><th>Montant</th><th>Statut</th><th>Échéance</th><th>Payée le</th><th>Note</th></tr></thead>
+              <thead><tr><th>Montant</th><th>Statut</th><th>Échéance</th><th>Payée le</th><th>Note</th><th></th></tr></thead>
               <tbody>
                 {tenant.invoices.map((inv) => (
                   <tr key={inv.id}>
@@ -142,6 +171,11 @@ export default function SaTenantDetail() {
                     <td>{shortDate(inv.due_date)}</td>
                     <td>{inv.paid_at ? shortDate(inv.paid_at) : "—"}</td>
                     <td className="sa-mono">{inv.notes || "—"}</td>
+                    <td style={{ textAlign: "right" }}>
+                      {inv.status !== "PAID" && inv.status !== "CANCELLED" && (
+                        <button className="btn btn-ghost btn-sm" title="Annuler" onClick={() => cancelInvoice(inv)}><Icon name="x" /></button>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>

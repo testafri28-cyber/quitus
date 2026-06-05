@@ -39,6 +39,19 @@ export const superadminApi = {
   createInvoice: (id, payload) => saRequest(`/tenants/${id}/invoices`, { method: "POST", body: payload }),
   invoices: (params) => saRequest(`/invoices${qs(params)}`),
   payInvoice: (id, payload) => saRequest(`/invoices/${id}/pay`, { method: "PATCH", body: payload }),
+  cancelInvoice: (id) => saRequest(`/invoices/${id}/cancel`, { method: "PATCH" }),
+  plans: () => saRequest("/plans"),
+  audit: () => saRequest("/audit"),
+  changePassword: (currentPassword, newPassword) => saRequest("/auth/password", { method: "PATCH", body: { currentPassword, newPassword } }),
+};
+
+// Libellés des actions du journal d'audit.
+export const AUDIT_LABEL = {
+  "tenant.create": "Client créé",
+  "tenant.update": "Client modifié",
+  "invoice.create": "Facture générée",
+  "invoice.pay": "Paiement encaissé",
+  "invoice.cancel": "Facture annulée",
 };
 
 // Métadonnées d'affichage (libellés FR, couleurs).

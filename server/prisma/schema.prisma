@@ -371,11 +371,35 @@ model Tenant {
   next_renewal  DateTime?
   contact_email String
   contact_phone String?
+  churned_at    DateTime? // date de résiliation (statut → CHURNED) pour le calcul du churn
   created_at    DateTime     @default(now())
   invoices      Invoice[]
   payments      Payment[]
 
   @@map("tenants")
+}
+
+// Catalogue tarifaire des plans (prix mensuel en FCFA) — base du calcul MRR/ARR.
+model PlanPrice {
+  id          String   @id @default(cuid())
+  plan        Plan     @unique
+  monthly_fcfa Int
+  updated_at  DateTime @updatedAt
+
+  @@map("plan_prices")
+}
+
+// Journal d'audit des actions du backoffice (append-only).
+model SuperAdminAudit {
+  id         String   @id @default(cuid())
+  admin_id   String
+  admin_email String
+  action     String // tenant.create | tenant.update | invoice.create | invoice.pay | invoice.cancel
+  detail     String? // résumé lisible
+  created_at DateTime @default(now())
+
+  @@index([created_at])
+  @@map("super_admin_audits")
 }
 
 model Invoice {

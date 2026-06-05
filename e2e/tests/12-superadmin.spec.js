@@ -27,11 +27,23 @@ test.describe("Backoffice SaaS (éditeur) — authentification séparée", () =>
     const stats = await (await request.get(`${API}/api/superadmin/stats`, { headers: bearer(token) })).json();
     expect(typeof stats.tenants.total).toBe("number");
     expect(typeof stats.mrr).toBe("number");
+    expect(typeof stats.collectedThisMonth).toBe("number"); // encaissé réel ce mois (≠ MRR)
+
     const rev = await (await request.get(`${API}/api/superadmin/revenue`, { headers: bearer(token) })).json();
     expect(rev.arr).toBe(rev.mrr * 12);
     expect(rev.payments6months.length).toBe(6);
+    expect(typeof rev.churnRate).toBe("number");
 
-    // Mauvais mot de passe → 401
+    // Catalogue tarifaire des plans (base du MRR)
+    const plans = await (await request.get(`${API}/api/superadmin/plans`, { headers: bearer(token) })).json();
+    expect(plans.plans.length).toBe(4);
+    expect(plans.plans.find((p) => p.plan === "PME").monthly_fcfa).toBeGreaterThan(0);
+
+    // Changement de mot de passe : mauvais mot de passe actuel → 400
+    const badPwd = await request.patch(`${API}/api/superadmin/auth/password`, { headers: bearer(token), data: { currentPassword: "FAUX", newPassword: "nouveau-mdp-123" } });
+    expect(badPwd.status()).toBe(400);
+
+    // Mauvais mot de passe au login → 401
     const bad = await request.post(`${API}/api/superadmin/auth/login`, { data: { email: SUPER.email, password: "x" } });
     expect(bad.status()).toBe(401);
 
@@ -65,7 +77,7 @@ test.describe("Backoffice SaaS (éditeur) — authentification séparée", () =>
 
     await expect(page).toHaveURL(/\/superadmin$/);
     await expect(page.getByRole("heading", { name: "Tableau de bord" })).toBeVisible();
-    await expect(page.locator(".sa-kpi", { hasText: "MRR du mois" })).toBeVisible();
+    await expect(page.locator(".sa-kpi", { hasText: "MRR" })).toBeVisible();
 
     // Navigation vers les clients
     await page.locator(".sa-nav", { hasText: "Clients" }).click();
