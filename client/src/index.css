@@ -152,6 +152,8 @@ a { color: inherit; }
 .nav-badge { margin-left: auto; font-size: 11px; font-weight: 600; color: var(--text-3); background: var(--surface-2); border-radius: 20px; padding: 1px 8px; }
 .nav-item.active .nav-badge { background: color-mix(in srgb, var(--accent) 18%, white); color: var(--accent-text); }
 .nav-at { margin-left: auto; flex-shrink: 0; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 10px; background: var(--accent); color: var(--accent-ink); font-size: 12px; font-weight: 700; line-height: 20px; text-align: center; }
+/* Mention « @ » et compteur de messages côte à côte : le @ pousse à droite, le compteur le suit. */
+.nav-at + .nav-badge { margin-left: 6px; }
 
 .sidebar-foot { margin-top: auto; padding-top: 14px; }
 .user-card { display: flex; align-items: center; gap: 11px; padding: 9px 10px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface); width: 100%; text-align: left; }

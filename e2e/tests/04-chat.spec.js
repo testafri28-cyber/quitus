@@ -44,11 +44,18 @@ test.describe("Discussion — temps réel, mentions, pièces jointes", () => {
 
     // surbrillance côté émetteur
     await expect(a.page.locator(".cm-bubble .mention").last()).toBeVisible();
-    // cloche côté destinataire + symbole « @ » sur l'item Discussion
+    // cloche côté destinataire + symbole « @ » ET compteur de messages sur l'item Discussion
+    const disc = b.page.locator(".nav-item", { hasText: "Discussion" });
     await expect(b.page.locator(".notif .icon-btn .notif-dot")).toBeVisible();
-    await expect(b.page.locator(".nav-item", { hasText: "Discussion" }).locator(".nav-at")).toBeVisible();
+    await expect(disc.locator(".nav-at")).toBeVisible();
+    await expect(disc.locator(".nav-badge")).toBeVisible(); // le nombre de messages s'affiche aussi
     await b.page.locator(".notif .icon-btn").click();
     await expect(b.page.locator(".notif-item", { hasText: "mentionné" })).toBeVisible();
+
+    // En ouvrant le salon où il est mentionné, le « @ » disparaît de la barre latérale.
+    await disc.click();
+    await b.page.locator(".chat-room", { hasText: "Salon général" }).first().click();
+    await expect(disc.locator(".nav-at")).toHaveCount(0);
 
     await a.context.close();
     await b.context.close();

@@ -8,6 +8,7 @@ import { chatApi, departmentsApi } from "../api/endpoints.js";
 import { BASE_URL } from "../api/client.js";
 import { useAuth } from "../context/AuthContext.jsx";
 import { usePresence } from "../context/PresenceContext.jsx";
+import { useNotifications } from "../context/NotificationsContext.jsx";
 import { PRESENCE_STATE_META, PRESENCE_OPTIONS } from "../lib/design.js";
 
 const msgTime = (iso) => new Date(iso).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
@@ -38,6 +39,7 @@ export default function Chat() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { socket, presenceState, myPresence, setMyPresence, people, unread, clearRoomUnread } = usePresence();
+  const { items: notifs, markRead } = useNotifications();
 
   const [rooms, setRooms] = useState([]);
   const [canCreate, setCanCreate] = useState(false);
@@ -133,6 +135,15 @@ export default function Chat() {
   useEffect(() => {
     if (listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight;
   }, [messages]);
+
+  // Ouvrir le salon où l'on est mentionné lève la mention : on marque ses notifications « @ » comme lues
+  // (fait disparaître le « @ » de la barre latérale). Vaut aussi pour une mention reçue salon ouvert.
+  useEffect(() => {
+    if (!activeId) return;
+    notifs.forEach((n) => {
+      if (n.type === "mention" && !n.read && n.roomId === activeId) markRead(n.id);
+    });
+  }, [activeId, notifs, markRead]);
 
   // Personnes citables (@) du salon actif : membres du service, ou tout l'annuaire pour le global.
   useEffect(() => {

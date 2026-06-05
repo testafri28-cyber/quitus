@@ -111,8 +111,8 @@ export function Sidebar({ space, screen, counts, collapsed, onToggle }) {
         <button key={it.k || "home"} className={"nav-item" + (screen === it.k ? " active" : "")} onClick={() => goto(it.k)} title={collapsed ? it.label : undefined}>
           <Icon name={it.icon} />
           <span>{it.label}</span>
-          {it.at ? <span className="nav-at" title="Vous avez été mentionné">@</span>
-            : it.badge != null && <span className="nav-badge">{it.badge}</span>}
+          {it.at && <span className="nav-at" title="Vous avez été mentionné">@</span>}
+          {it.badge != null && <span className="nav-badge">{it.badge}</span>}
         </button>
       ))}
 
