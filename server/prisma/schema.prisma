@@ -11,8 +11,9 @@ datasource db {
 }
 
 enum Role {
-  MEMBER // tout le monde : peut soumettre ET intervenir sur les demandes de son service
-  ADMIN  // vue globale + gestion
+  MEMBER      // tout le monde : peut soumettre ET intervenir sur les demandes de son service
+  ADMIN       // vue globale + gestion
+  SUPER_ADMIN // réservé / inutilisé — le backoffice éditeur a ses propres comptes (table SuperAdmin)
 }
 
 enum Urgency {
@@ -340,4 +341,101 @@ model Feedback {
   createdAt DateTime @default(now()) @map("created_at")
 
   @@map("feedback")
+}
+
+// ============================================================
+// Backoffice SaaS (éditeur Quitus) — clients, abonnements, facturation, revenus.
+// Entièrement autonome : aucun lien avec les modèles du frontoffice (Company, User…).
+// Connexion et comptes SÉPARÉS du frontoffice (table SuperAdmin dédiée).
+// ============================================================
+
+// Compte du personnel de l'éditeur Quitus (PAS un utilisateur client).
+// Login distinct (/api/superadmin/auth/login) → aucun lien avec User/Company.
+model SuperAdmin {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@map("super_admins")
+}
+
+model Tenant {
+  id            String       @id @default(cuid())
+  name          String
+  plan          Plan         @default(STARTER)
+  status        TenantStatus @default(TRIAL)
+  trial_ends_at DateTime?
+  billing_cycle BillingCycle @default(MONTHLY)
+  next_renewal  DateTime?
+  contact_email String
+  contact_phone String?
+  created_at    DateTime     @default(now())
+  invoices      Invoice[]
+  payments      Payment[]
+
+  @@map("tenants")
+}
+
+model Invoice {
+  id          String        @id @default(cuid())
+  tenant_id   String
+  tenant      Tenant        @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  amount_fcfa Int
+  status      InvoiceStatus @default(PENDING)
+  due_date    DateTime
+  paid_at     DateTime?
+  notes       String?
+  created_at  DateTime      @default(now())
+
+  @@index([tenant_id])
+  @@map("invoices")
+}
+
+model Payment {
+  id              String        @id @default(cuid())
+  tenant_id       String
+  tenant          Tenant        @relation(fields: [tenant_id], references: [id], onDelete: Cascade)
+  amount_fcfa     Int
+  method          PaymentMethod
+  transaction_ref String?
+  paid_at         DateTime      @default(now())
+
+  @@index([tenant_id])
+  @@map("payments")
+}
+
+enum Plan {
+  STARTER
+  ESSENTIEL
+  PME
+  ENTERPRISE
+}
+
+enum TenantStatus {
+  TRIAL
+  ACTIVE
+  SUSPENDED
+  CHURNED
+}
+
+enum BillingCycle {
+  MONTHLY
+  QUARTERLY
+  ANNUAL
+}
+
+enum InvoiceStatus {
+  PENDING
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum PaymentMethod {
+  WAVE
+  ORANGE_MONEY
+  MTN_MOMO
+  BANK_TRANSFER
 }

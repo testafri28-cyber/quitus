@@ -19,6 +19,7 @@ import settingRoutes from "./routes/settings.js";
 import auditRoutes from "./routes/audit.js";
 import pushRoutes from "./routes/push.js";
 import chatRoutes from "./routes/chat.js";
+import superadminRoutes from "./routes/superadmin.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -55,6 +56,7 @@ app.use("/api/settings", settingRoutes);
 app.use("/api/audit", auditRoutes);
 app.use("/api/push", pushRoutes);
 app.use("/api/chat", chatRoutes);
+app.use("/api/superadmin", superadminRoutes); // backoffice SaaS (éditeur Quitus)
 
 // 404
 app.use((req, res) => {

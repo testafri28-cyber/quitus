@@ -15,6 +15,17 @@ import ServicesAnnuaire from "./pages/ServicesAnnuaire.jsx";
 import Chat from "./pages/Chat.jsx";
 import AdminGestion from "./pages/AdminGestion.jsx";
 
+// Backoffice SaaS (éditeur Quitus) — espace séparé, AUTH PROPRE (table SuperAdmin,
+// login dédié /superadmin/login). Aucun lien avec l'authentification du frontoffice.
+import { SuperAuthProvider } from "./pages/superadmin/SuperAuth.jsx";
+import SaLogin from "./pages/superadmin/Login.jsx";
+import SuperadminLayout from "./pages/superadmin/Layout.jsx";
+import SaDashboard from "./pages/superadmin/Dashboard.jsx";
+import SaTenants from "./pages/superadmin/Tenants.jsx";
+import SaTenantDetail from "./pages/superadmin/TenantDetail.jsx";
+import SaInvoices from "./pages/superadmin/Invoices.jsx";
+import SaRevenue from "./pages/superadmin/Revenue.jsx";
+
 function HomeRedirect() {
   const { user, loading } = useAuth();
   if (loading) return null;
@@ -53,6 +64,18 @@ export default function App() {
           <Route path="chat" element={<Chat />} />
           <Route path="gestion" element={<AdminGestion />} />
           <Route path="tickets/:id" element={<TicketDetail />} />
+        </Route>
+      </Route>
+
+      {/* Backoffice SaaS (éditeur) — espace + authentification DÉDIÉS (login séparé). */}
+      <Route element={<SuperAuthProvider><Outlet /></SuperAuthProvider>}>
+        <Route path="/superadmin/login" element={<SaLogin />} />
+        <Route path="/superadmin" element={<SuperadminLayout />}>
+          <Route index element={<SaDashboard />} />
+          <Route path="tenants" element={<SaTenants />} />
+          <Route path="tenants/:id" element={<SaTenantDetail />} />
+          <Route path="invoices" element={<SaInvoices />} />
+          <Route path="revenue" element={<SaRevenue />} />
         </Route>
       </Route>
 
