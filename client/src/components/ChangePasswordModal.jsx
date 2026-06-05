@@ -3,23 +3,15 @@ import { createPortal } from "react-dom";
 import { Icon } from "./Icon.jsx";
 import { Avatar } from "./Badges.jsx";
 import { authApi } from "../api/endpoints.js";
-import { useAuth } from "../context/AuthContext.jsx";
 import { usePresence } from "../context/PresenceContext.jsx";
 import { ROLE_LABELS, PRESENCE_OPTIONS, PRESENCE_STATE_META } from "../lib/design.js";
 
 const memberSince = (iso) =>
   iso ? new Date(iso).toLocaleDateString("fr-FR", { month: "long", year: "numeric" }) : "—";
 
-// Modale « Mon compte » — profil, disponibilité et mot de passe.
+// Modale « Mon compte » — profil (lecture seule), disponibilité et mot de passe.
 export function ChangePasswordModal({ user, onClose }) {
-  const { patchUser } = useAuth();
   const { myPresence, setMyPresence, presenceState } = usePresence();
-
-  // Profil : nom modifiable
-  const [name, setName] = useState(user?.name || "");
-  const [savingName, setSavingName] = useState(false);
-  const [nameMsg, setNameMsg] = useState("");
-  const [nameErr, setNameErr] = useState("");
 
   // Mot de passe
   const [current, setCurrent] = useState("");
@@ -30,19 +22,6 @@ export function ChangePasswordModal({ user, onClose }) {
   const [done, setDone] = useState(false);
 
   const roleLabel = user?.role === "ADMIN" ? ROLE_LABELS.ADMIN : ROLE_LABELS.MEMBER;
-  const nameDirty = name.trim() && name.trim() !== user?.name;
-
-  const saveName = async () => {
-    setNameErr(""); setNameMsg("");
-    if (name.trim().length < 2) return setNameErr("Le nom doit faire au moins 2 caractères.");
-    setSavingName(true);
-    try {
-      const { user: updated } = await authApi.updateProfile({ name: name.trim() });
-      patchUser({ name: updated.name });
-      setNameMsg("Nom mis à jour.");
-    } catch (e) { setNameErr(e.message); }
-    finally { setSavingName(false); }
-  };
 
   const submit = async (e) => {
     e.preventDefault();
@@ -94,20 +73,6 @@ export function ChangePasswordModal({ user, onClose }) {
               </select>
             </div>
             <div className="hint">Visible par vos collègues dans la discussion et l'annuaire.</div>
-          </div>
-
-          {/* Nom affiché (modifiable) */}
-          <div>
-            <div className="section-label" style={{ marginBottom: 8 }}>Nom affiché</div>
-            {nameErr && <div className="error-box" style={{ marginBottom: 8 }}>{nameErr}</div>}
-            {nameMsg && <div className="hint" style={{ color: "var(--st-resolu)", marginTop: 0, marginBottom: 8 }}>✓ {nameMsg}</div>}
-            <div className="row" style={{ gap: 8 }}>
-              <input className="input" style={{ flex: 1 }} value={name} onChange={(e) => { setName(e.target.value); setNameMsg(""); }} maxLength={80} />
-              <button className="btn btn-subtle" onClick={saveName} disabled={!nameDirty || savingName}>
-                {savingName ? "…" : "Enregistrer"}
-              </button>
-            </div>
-            <div className="hint">L'e-mail de connexion est géré par l'administrateur.</div>
           </div>
 
           {/* Mot de passe */}

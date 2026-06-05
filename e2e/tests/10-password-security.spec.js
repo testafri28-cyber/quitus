@@ -23,46 +23,20 @@ test.describe("Mots de passe & sécurité", () => {
     await expect(modal.locator(".acct-cell", { hasText: "Service" })).toContainText("Informatique");
     await expect(modal.locator(".acct-cell", { hasText: "Entreprise" })).toBeVisible();
     await expect(modal.locator(".acct-cell", { hasText: "Membre depuis" })).toBeVisible();
-    // Disponibilité + nom modifiable + mot de passe
+    // Disponibilité + mot de passe (le nom n'est PAS modifiable)
     await expect(modal.getByText("Ma disponibilité")).toBeVisible();
-    await expect(modal.getByText("Nom affiché")).toBeVisible();
+    await expect(modal.getByText("Nom affiché")).toHaveCount(0);
     await expect(modal.getByText("Changer mon mot de passe")).toBeVisible();
     await expect(modal.getByPlaceholder("Mot de passe actuel")).toBeVisible();
   });
 
-  test("profil : l'utilisateur modifie son propre nom (UI + persistance)", async ({ page, request }) => {
-    // Compte jetable pour ne pas renommer un utilisateur réel.
-    const adminTok = await apiLogin(request, USERS.admin);
-    const it = (await getDepartments(request, adminTok)).find((d) => d.name === "Informatique");
-    const companies = await (await request.get(`${API}/api/departments/companies`, { headers: bearer(adminTok) })).json();
-    const idc = companies.companies.find((c) => c.slug === "idc");
-    const email = "e2e.profil@idc.ci";
-    // (idempotent) crée le compte s'il n'existe pas
-    await request.post(`${API}/api/users`, {
-      headers: bearer(adminTok),
-      data: { name: "[E2E] Profil", email, password: "password123", role: "MEMBER", companyId: idc.id, departmentId: it.id },
-    });
-
-    const { token } = await apiAuth(request, email);
-    await authPage(page, token);
-    await page.goto("/global/dashboard");
-    await page.locator(".nav-item", { hasText: "Mon compte" }).click();
-    const modal = page.locator(".modal", { hasText: "Mon compte" });
-    await expect(modal).toBeVisible();
-
-    const newName = `[E2E] Profil ${Date.now()}`;
-    const input = modal.locator(".input").first();
-    await input.fill(newName);
-    await modal.getByRole("button", { name: "Enregistrer" }).click();
-    await expect(modal.getByText("Nom mis à jour.")).toBeVisible();
-
-    // Persistance côté serveur
+  test("le changement de nom n'est pas autorisé (route absente)", async ({ request }) => {
+    const token = await apiLogin(request, USERS.boti);
+    const r = await request.patch(`${API}/api/auth/profile`, { headers: bearer(token), data: { name: "Tentative" } });
+    expect(r.status()).toBe(404); // la route n'existe pas
+    // le nom n'a pas changé
     const me = await (await request.get(`${API}/api/auth/me`, { headers: bearer(token) })).json();
-    expect(me.user.name).toBe(newName);
-
-    // Validation : un nom trop court est refusé (400)
-    const bad = await request.patch(`${API}/api/auth/profile`, { headers: bearer(token), data: { name: "a" } });
-    expect(bad.status()).toBe(400);
+    expect(me.user.name).toBe("Boti Raoul");
   });
 
   test("réinit admin + changement par l'utilisateur", async ({ request }) => {

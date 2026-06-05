@@ -43,13 +43,8 @@ export function AuthProvider({ children }) {
     setUser(null);
   }
 
-  // Met à jour localement le profil en mémoire (ex. après modification du nom).
-  function patchUser(fields) {
-    setUser((u) => (u ? { ...u, ...fields } : u));
-  }
-
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, patchUser }}>
+    <AuthContext.Provider value={{ user, loading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
