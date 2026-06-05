@@ -34,4 +34,24 @@ test.describe("Responsive (mobile)", () => {
     const docW = await page.evaluate(() => document.documentElement.scrollWidth);
     expect(docW).toBeLessThanOrEqual(390 + 1);
   });
+
+  test("en mobile, la liste de tickets passe en cartes (toutes les infos visibles)", async ({ page, request }) => {
+    const { token } = await apiAuth(request, USERS.boti);
+    await authPage(page, token);
+    await page.goto("/global/dashboard");
+
+    // L'en-tête de colonnes du tableau est masqué (mode cartes).
+    await expect(page.locator(".t-head")).toBeHidden();
+
+    // La première carte affiche son statut ET sa date, sans débordement horizontal.
+    const row = page.locator(".t-row").first();
+    await expect(row).toBeVisible();
+    await expect(row.locator(".stat")).toBeVisible();      // statut visible
+    await expect(row.locator(".t-date")).toBeVisible();    // date visible
+    const within = await row.evaluate((el) => {
+      const r = el.getBoundingClientRect();
+      return r.right <= window.innerWidth + 1;
+    });
+    expect(within, "la carte ne déborde pas du viewport").toBeTruthy();
+  });
 });

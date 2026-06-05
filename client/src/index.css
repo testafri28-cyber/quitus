@@ -364,10 +364,12 @@ a { color: inherit; }
 .filter-opt .fo-check { width:16px; height:16px; border-radius: 4px; border:1.5px solid var(--border-strong); display:grid; place-items:center; color:transparent; flex-shrink:0; }
 .filter-opt.on .fo-check { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
 
-.tickets { background: var(--surface); border:1px solid var(--border); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow-sm); }
+.tickets { background: var(--surface); border:1px solid var(--border); border-radius: var(--radius); overflow-x: auto; overflow-y: hidden; box-shadow: var(--shadow-sm); }
 .pager { display:flex; align-items:center; justify-content:center; gap: 16px; padding: 14px 22px; background: var(--surface-2); }
 .pager-info { font-size: 13px; color: var(--text-3); font-weight: 500; min-width: 130px; text-align:center; }
-.t-head, .t-row { display: grid; grid-template-columns: 44px minmax(0,1fr) 164px 114px 120px 138px 128px; align-items: center; gap: 12px; }
+/* La colonne « Demande » garde une largeur lisible (180px min) → si l'espace manque,
+   la table défile horizontalement au lieu de rogner la dernière colonne. */
+.t-head, .t-row { display: grid; grid-template-columns: 44px minmax(180px,1fr) 164px 114px 120px 138px 128px; align-items: center; gap: 12px; }
 .t-head { padding: 12px 22px; border-bottom: 1px solid var(--border); background: var(--surface-2); font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--text-3); }
 .t-row { padding: 11px 22px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background .12s; width: 100%; text-align: left; }
 .t-row:last-child { border-bottom: none; }
@@ -936,4 +938,47 @@ a { color: inherit; }
   .chat-rooms { flex-wrap: wrap; overflow: visible; }
   .chat-me { flex: 1 0 100%; margin-bottom: 2px; }
   .chat-room { flex: 0 1 auto; }
+}
+
+/* ============================================================
+   Téléphone (≤ 600px) : la liste de tickets passe en cartes empilées
+   (plus de défilement horizontal — toutes les infos visibles)
+   ============================================================ */
+@media (max-width: 600px) {
+  .tickets { overflow-x: hidden; }
+  .t-head { display: none; }
+  .tickets .t-head, .tickets .t-row { min-width: 0; }
+  .t-row {
+    display: flex; flex-wrap: wrap; align-items: center;
+    gap: 8px 10px; padding: 14px 15px;
+  }
+  .t-row > * { min-width: 0; }
+  .t-row .type-chip { order: 0; width: 36px; height: 36px; }
+  .t-row .type-chip svg { width: 20px; height: 20px; }
+  .t-titlewrap { order: 1; flex: 1 1 auto; }
+  .t-row .t-title { white-space: normal; }            /* le titre peut tenir sur 2 lignes */
+  .t-svc { order: 2; flex: 1 1 100%; }
+  .t-row .urg, .t-row .stat { order: 3; }
+  .t-assignee { order: 3; flex: 0 1 auto; }
+  .t-row > div:last-child {                            /* émetteur + date sur leur ligne */
+    order: 4; flex: 1 1 100%;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .t-row > div:last-child .t-date { margin-top: 0 !important; }
+  .pager { gap: 10px; padding: 14px; }
+}
+
+/* ============================================================
+   Document imprimable — confort à l'écran sur petit téléphone
+   (scopé « screen » : n'affecte jamais la sortie imprimée)
+   ============================================================ */
+@media screen and (max-width: 560px) {
+  .doc-toolbar { flex-wrap: wrap; padding: 10px 12px; gap: 8px; }
+  .doc-toolbar .btn-primary { flex: 1 1 100%; }
+  .doc-sheet { padding: 26px 20px; max-width: calc(100% - 20px); margin-top: 16px; }
+  .doc-head { gap: 14px; }
+  .doc-grid { grid-template-columns: 1fr; }
+  .doc-cell { border-right: none !important; }
+  .doc-signs { grid-template-columns: 1fr; gap: 16px; }
+  .doc-title { font-size: 20px; }
 }
