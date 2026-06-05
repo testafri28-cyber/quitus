@@ -26,7 +26,9 @@ import SaAccount360 from "./pages/superadmin/Account360.jsx";
 import SaDashboard from "./pages/superadmin/Dashboard.jsx";
 import SaInvoices from "./pages/superadmin/Invoices.jsx";
 import SaRevenue from "./pages/superadmin/Revenue.jsx";
-import SaStub from "./pages/superadmin/Stub.jsx";
+import SaAdoption from "./pages/superadmin/Adoption.jsx";
+import SaOps from "./pages/superadmin/Ops.jsx";
+import SaTrust from "./pages/superadmin/Trust.jsx";
 
 // Redirige l'ancien détail /tenants/:id vers la nouvelle fiche 360°.
 function TenantRedirect() {
@@ -84,10 +86,10 @@ export default function App() {
           <Route path="comptes/:id" element={<SaAccount360 />} />
           <Route path="invoices" element={<SaInvoices />} />
           <Route path="revenue" element={<SaRevenue />} />
-          {/* Phase 2 — nav + routes stub */}
-          <Route path="adoption" element={<SaStub title="Adoption" desc="Activation, usage et expansion des comptes." />} />
-          <Route path="sante" element={<SaStub title="Santé & exploitation" desc="Disponibilité, incidents et exploitation technique." />} />
-          <Route path="confiance" element={<SaStub title="Confiance & contrôle" desc="Sécurité, audit et conformité." />} />
+          {/* Phase 2 — modules complets */}
+          <Route path="adoption" element={<SaAdoption />} />
+          <Route path="sante" element={<SaOps />} />
+          <Route path="confiance" element={<SaTrust />} />
           {/* Rétro-compatibilité (anciennes routes conservées) */}
           <Route path="apercu" element={<SaDashboard />} />
           <Route path="tenants" element={<Navigate to="/superadmin/comptes" replace />} />

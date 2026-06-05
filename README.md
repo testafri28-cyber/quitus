@@ -128,7 +128,10 @@ système et watchlist), **Comptes** (liste classée par **score de santé** + fi
 **360°** : score 0–100 et ses 4 composantes usage/engagement/support/facturation,
 usage, factures, paiements, timeline, **consultation-en-tant-que**), **Facturation**
 (encaissement → paiement, annulation), **Revenus** (MRR/ARR sur abonnements actifs,
-churn, par plan, graphe 6 mois). Modules **Adoption / Santé / Confiance** en préparation.
+churn, par plan, graphe 6 mois), **Adoption** (conversion d'essai, usage, comptes
+dormants, opportunités d'expansion), **Santé & exploitation** (disponibilité,
+intégrations, escalades support), **Confiance & contrôle** (contrôles de sécurité +
+journal d'audit filtrable, dont les consultations-en-tant-que).
 
 **Score de santé** : calculé (service pur `computeHealth`) à partir de signaux par
 compte (usage/engagement/support) + statut de facturation réel ; buckets Sain / À

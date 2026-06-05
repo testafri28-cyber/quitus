@@ -409,9 +409,12 @@ router.get("/plans", async (_req, res, next) => {
   } catch (err) { next(err); }
 });
 
-router.get("/audit", async (_req, res, next) => {
+router.get("/audit", async (req, res, next) => {
   try {
-    const entries = await prisma.superAdminAudit.findMany({ take: 50, orderBy: { created_at: "desc" } });
+    const where = {};
+    if (req.query.action) where.action = req.query.action;
+    const take = Math.min(200, Math.max(1, parseInt(req.query.limit, 10) || 50));
+    const entries = await prisma.superAdminAudit.findMany({ where, take, orderBy: { created_at: "desc" } });
     res.json({ entries });
   } catch (err) { next(err); }
 });
@@ -467,6 +470,54 @@ router.get("/revenue", async (_req, res, next) => {
 
 /* ---------------- Santé système ---------------- */
 router.get("/system/health", (_req, res) => res.json(systemHealthPayload()));
+
+/* ---------------- Phase 2 : Adoption ---------------- */
+const PLAN_ORDER = ["STARTER", "ESSENTIEL", "PME", "ENTERPRISE"];
+const nextPlan = (p) => PLAN_ORDER[PLAN_ORDER.indexOf(p) + 1] || null;
+const UPSELL_MIN_TICKETS = 35; // usage élevé → candidat à l'expansion
+const DORMANT_DAYS = 14;        // inactivité → compte dormant
+
+router.get("/adoption", async (_req, res, next) => {
+  try {
+    const now = new Date();
+    const sevenAgo = new Date(now.getTime() - 7 * 86400000);
+    const tenants = await prisma.tenant.findMany();
+    const active = tenants.filter((t) => t.status === "ACTIVE");
+    const trials = tenants.filter((t) => t.status === "TRIAL")
+      .sort((a, b) => (a.trial_ends_at ? new Date(a.trial_ends_at) : Infinity) - (b.trial_ends_at ? new Date(b.trial_ends_at) : Infinity));
+    const churned = tenants.filter((t) => t.status === "CHURNED").length;
+
+    const avgUsage = active.length ? Math.round(active.reduce((s, t) => s + t.tickets_30d, 0) / active.length) : 0;
+    const activeLast7d = tenants.filter((t) => t.last_activity_at && new Date(t.last_activity_at) >= sevenAgo).length;
+
+    const expansion = active.filter((t) => t.tickets_30d >= UPSELL_MIN_TICKETS && nextPlan(t.plan))
+      .map((t) => ({ id: t.id, name: t.name, plan: t.plan, tickets_30d: t.tickets_30d, suggestedPlan: nextPlan(t.plan) }));
+    const dormant = active.filter((t) => {
+      const d = t.last_activity_at ? Math.floor((now - new Date(t.last_activity_at)) / 86400000) : 999;
+      return d > DORMANT_DAYS || t.tickets_30d < 5;
+    }).map((t) => ({ id: t.id, name: t.name, lastActivityAt: t.last_activity_at, tickets_30d: t.tickets_30d }));
+
+    const planDistribution = PLANS.map((p) => ({ plan: p, count: tenants.filter((t) => t.plan === p && t.status !== "CHURNED").length }));
+    const conversionRate = (active.length + churned) > 0 ? Math.round((active.length / (active.length + churned)) * 100) : 0;
+
+    res.json({
+      kpis: { activeAccounts: active.length, trialsOpen: trials.length, avgUsage, activeLast7d, upsellCount: expansion.length, conversionRate },
+      trialsToConvert: trials.map((t) => ({ id: t.id, name: t.name, plan: t.plan, trial_ends_at: t.trial_ends_at, tickets_30d: t.tickets_30d })),
+      dormant, expansion, planDistribution,
+    });
+  } catch (err) { next(err); }
+});
+
+/* ---------------- Phase 2 : Santé & exploitation ---------------- */
+router.get("/ops", async (_req, res, next) => {
+  try {
+    const tenants = await prisma.tenant.findMany({ where: { open_escalations: { gt: 0 } } });
+    const escalations = tenants
+      .map((t) => ({ id: t.id, name: t.name, open: t.open_escalations, over24h: t.escalations_over_24h }))
+      .sort((a, b) => b.over24h - a.over24h || b.open - a.open);
+    res.json({ system: systemHealthPayload(), escalations });
+  } catch (err) { next(err); }
+});
 
 /* ---------------- Cockpit (landing orientée action) ---------------- */
 const SEV_ORDER = { high: 0, medium: 1, low: 2 };

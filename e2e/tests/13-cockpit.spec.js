@@ -101,4 +101,43 @@ test.describe("Console d'opérateur (cockpit, santé, impersonation)", () => {
     await page.goto("/superadmin");
     await expect(page).toHaveURL(/\/superadmin\/login/);
   });
+
+  // ---- Phase 2 : Adoption / Santé / Confiance ----
+  test("API : adoption, ops et audit filtré", async ({ request }) => {
+    const token = await superLogin(request);
+    const ad = await (await request.get(`${API}/api/superadmin/adoption`, { headers: bearer(token) })).json();
+    expect(typeof ad.kpis.conversionRate).toBe("number");
+    expect(Array.isArray(ad.trialsToConvert)).toBeTruthy();
+    expect(Array.isArray(ad.expansion)).toBeTruthy();
+    expect(ad.planDistribution.length).toBe(4);
+
+    const ops = await (await request.get(`${API}/api/superadmin/ops`, { headers: bearer(token) })).json();
+    expect(ops.system.webPush).toBeTruthy();
+    expect(Array.isArray(ops.escalations)).toBeTruthy();
+    // escalades triées (les >24h d'abord)
+    const over = ops.escalations.map((e) => e.over24h);
+    expect(over).toEqual([...over].sort((a, b) => b - a));
+
+    const filtered = await (await request.get(`${API}/api/superadmin/audit?action=tenant.update&limit=10`, { headers: bearer(token) })).json();
+    expect(filtered.entries.every((e) => e.action === "tenant.update")).toBeTruthy();
+  });
+
+  test("UI : les 3 modules Phase 2 sont des pages complètes", async ({ page, request }) => {
+    const token = await superLogin(request);
+    await page.addInitScript((t) => localStorage.setItem("quitus_super_token", t), token);
+
+    await page.goto("/superadmin/adoption");
+    await expect(page.getByRole("heading", { name: "Adoption" })).toBeVisible();
+    await expect(page.getByText("Essais à convertir")).toBeVisible();
+    await expect(page.getByText("Répartition par plan")).toBeVisible();
+
+    await page.goto("/superadmin/sante");
+    await expect(page.getByRole("heading", { name: "Santé & exploitation" })).toBeVisible();
+    await expect(page.getByText("État des services")).toBeVisible();
+
+    await page.goto("/superadmin/confiance");
+    await expect(page.getByRole("heading", { name: "Confiance & contrôle" })).toBeVisible();
+    await expect(page.getByText("Contrôles de sécurité")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Journal d'audit" })).toBeVisible();
+  });
 });
