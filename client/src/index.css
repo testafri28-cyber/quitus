@@ -825,6 +825,11 @@ a { color: inherit; }
   .chat-wrap { grid-template-columns: 1fr; height: auto; }
   .chat-rooms { flex-direction: row; overflow-x: auto; }
   .chat-msg { max-width: 92%; }
+  /* En-tête du salon : le nom et les actions de gestion passent à la ligne
+     (sinon « Renommer / Archiver / Supprimer » sortent du champ de vision). */
+  .chat-head { flex-wrap: wrap; align-items: flex-start; }
+  .chat-head > .row { flex-wrap: wrap; gap: 6px; }
+  .chat-head .btn-sm { padding: 6px 10px; }
 }
 
 /* ---------------- Lien de dépendance (besoin ↔ ticket en attente) ---------------- */
@@ -915,6 +920,23 @@ a { color: inherit; }
   .page { padding: 14px 12px 56px; }
   /* boutons d'action pleine largeur, empilés */
   .spread.actions, .detail-head { flex-wrap: wrap; }
+
+  /* Modales : toujours contenues dans l'écran (annule les largeurs fixes en ligne
+     comme width:440/480, que max-width:100% ne borne pas dans une grille). */
+  .modal-overlay { padding: 12px; }
+  .modal { width: auto !important; max-width: calc(100vw - 24px) !important; }
+
+  /* Panneaux de la topbar (cloche) : ancrés à l'écran, pas au bouton (sinon le côté
+     gauche sort du champ). La barre porte un backdrop-filter → c'est le bloc conteneur
+     du « fixed », donc left/right se calent sur la largeur de la barre = l'écran. */
+  .notif-panel {
+    position: fixed; top: 58px; left: 10px; right: 10px;
+    width: auto; max-width: none;
+  }
+  .notif-list { max-height: 70vh; }
+
+  /* Menus de filtre (Type / Statut / Urgence) : jamais plus larges que l'écran. */
+  .filter-menu { max-width: calc(100vw - 24px); }
 }
 
 /* ---- Responsive : correctifs d'alignement ---- */

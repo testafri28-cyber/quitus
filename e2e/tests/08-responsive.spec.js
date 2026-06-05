@@ -54,4 +54,59 @@ test.describe("Responsive (mobile)", () => {
     });
     expect(within, "la carte ne déborde pas du viewport").toBeTruthy();
   });
+
+  // Un élément est-il entièrement dans le viewport (gauche ≥ 0 et droite ≤ largeur) ?
+  const inViewport = (loc) => loc.evaluate((el) => {
+    const r = el.getBoundingClientRect();
+    return r.left >= -1 && r.right <= window.innerWidth + 1 && r.width > 0;
+  });
+
+  test("le panneau de notifications tient dans l'écran", async ({ page, request }) => {
+    const { token } = await apiAuth(request, USERS.admin);
+    await authPage(page, token);
+    await page.goto("/admin/dashboard");
+    await page.locator(".notif .icon-btn").click();
+    const panel = page.locator(".notif-panel");
+    await expect(panel).toBeVisible();
+    expect(await inViewport(panel), "panneau notif dans l'écran").toBeTruthy();
+    // le titre du panneau est visible (côté gauche non rogné)
+    await expect(panel.getByText("Notifications")).toBeVisible();
+  });
+
+  test("les modales (Mon compte, préférences) tiennent dans l'écran", async ({ page, request }) => {
+    const { token } = await apiAuth(request, USERS.admin);
+    await authPage(page, token);
+    await page.goto("/admin/dashboard");
+
+    await page.locator('.icon-btn[title="Préférences de notification"]').click();
+    const prefs = page.locator(".modal");
+    await expect(prefs).toBeVisible();
+    expect(await inViewport(prefs), "modale préférences dans l'écran").toBeTruthy();
+    await page.locator('.modal .icon-btn[title="Fermer"]').click();
+
+    await page.locator(".topbar-burger").click();
+    await page.locator(".nav-item", { hasText: "Mon compte" }).click();
+    const acct = page.locator(".modal");
+    await expect(acct).toBeVisible();
+    expect(await inViewport(acct), "modale Mon compte dans l'écran").toBeTruthy();
+  });
+
+  test("en-tête de discussion : les actions de gestion restent dans l'écran", async ({ page, request }) => {
+    const { token } = await apiAuth(request, USERS.boti); // responsable IT → salon géré
+    await authPage(page, token);
+    await page.goto("/global/chat");
+    // ouvre un salon offrant des actions de gestion
+    const rooms = page.locator(".chat-room");
+    const n = await rooms.count();
+    for (let i = 0; i < n; i++) {
+      await rooms.nth(i).click();
+      if (await page.locator(".chat-head .btn").count()) break;
+    }
+    const btns = page.locator(".chat-head .btn");
+    const count = await btns.count();
+    expect(count).toBeGreaterThan(0);
+    for (let i = 0; i < count; i++) {
+      expect(await inViewport(btns.nth(i)), `bouton de gestion ${i} dans l'écran`).toBeTruthy();
+    }
+  });
 });
