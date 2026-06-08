@@ -37,6 +37,7 @@ export default function Submit() {
   const [type, setType] = useState("INTERVENTION");
   const [title, setTitle] = useState(searchParams.get("title") || "");
   const [service, setService] = useState(searchParams.get("service") || null);
+  const [laisserTrier, setLaisserTrier] = useState(false);
   const [members, setMembers] = useState([]);
   const [suggested, setSuggested] = useState("");
   const [suggestEnabled, setSuggestEnabled] = useState(true);
@@ -74,7 +75,7 @@ export default function Submit() {
     return departments.filter((d) => groups.includes(groupOf(d)));
   }, [departments, space]);
 
-  const valid = title.trim() && service && desc.trim();
+  const valid = title.trim() && desc.trim() && (service || laisserTrier);
 
   async function submit() {
     setTouched(true);
@@ -87,8 +88,8 @@ export default function Submit() {
       fd.append("type", type);
       fd.append("urgency", urgency);
       fd.append("space", SPACE_API[space] || "GLOBAL");
-      fd.append("departmentId", service);
-      if (suggested) fd.append("suggestedToId", suggested);
+      if (service && !laisserTrier) fd.append("departmentId", service); // sinon → A_TRIER (boîte de tri)
+      if (suggested && !laisserTrier) fd.append("suggestedToId", suggested);
       fd.append("description", desc.trim());
       files.forEach((f) => fd.append("attachments", f)); // une ou plusieurs pièces jointes
       if (carriedAttachment) {
@@ -137,12 +138,16 @@ export default function Submit() {
           </div>
 
           <div className="field">
-            <label className="label">Service destinataire</label>
-            <ServicePicker departments={visibleDepts} value={service} onChange={setService} space={space} />
-            {touched && !service && <div className="hint" style={{ color: "var(--u-urgente)" }}>Choisissez un service.</div>}
+            <label className="label">Service destinataire <span className="opt">· optionnel</span></label>
+            {!laisserTrier && <ServicePicker departments={visibleDepts} value={service} onChange={setService} space={space} />}
+            <label className="row" style={{ gap: 8, marginTop: 10, cursor: "pointer", fontSize: 13.5, color: "var(--text-2)" }}>
+              <input type="checkbox" checked={laisserTrier} onChange={(e) => { setLaisserTrier(e.target.checked); if (e.target.checked) setService(null); }} />
+              Je ne sais pas — laisser un modérateur orienter la demande (tri).
+            </label>
+            {touched && !service && !laisserTrier && <div className="hint" style={{ color: "var(--u-urgente)" }}>Choisissez un service ou cochez « laisser trier ».</div>}
           </div>
 
-          {service && suggestEnabled && (
+          {service && !laisserTrier && suggestEnabled && (
             <div className="field">
               <label className="label">Suggérer un membre <span className="opt">· optionnel</span></label>
               {members.length > 0 ? (

@@ -14,6 +14,8 @@ import TicketDetail from "./pages/TicketDetail.jsx";
 import ServicesAnnuaire from "./pages/ServicesAnnuaire.jsx";
 import Chat from "./pages/Chat.jsx";
 import AdminGestion from "./pages/AdminGestion.jsx";
+import TriBox from "./pages/TriBox.jsx";
+import Validation from "./pages/Validation.jsx";
 
 // Backoffice SaaS (éditeur Quitus) — espace séparé, AUTH PROPRE (table SuperAdmin,
 // login dédié /superadmin/login). Aucun lien avec l'authentification du frontoffice.
@@ -70,6 +72,8 @@ export default function App() {
           <Route path="form" element={<Submit />} />
           <Route path="leave" element={<LeaveRequest />} />
           <Route path="dashboard" element={<Dashboard />} />
+          <Route path="tri" element={<TriBox />} />
+          <Route path="valider" element={<Validation />} />
           <Route path="services" element={<ServicesAnnuaire />} />
           <Route path="chat" element={<Chat />} />
           <Route path="gestion" element={<AdminGestion />} />

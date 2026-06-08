@@ -20,6 +20,11 @@ export const ticketsApi = {
   createLeave: (payload) => api.post("/tickets", payload),
   setStatus: (id, status) => api.patch(`/tickets/${id}/status`, { status }),
   assign: (id, payload) => api.patch(`/tickets/${id}/assign`, payload),
+  // Routage : boîte de tri (modérateurs) + file de validation (responsables)
+  aTrier: () => api.get("/tickets/a-trier"),
+  aValider: () => api.get("/tickets/a-valider"),
+  trier: (id, departmentId) => api.patch(`/tickets/${id}/trier`, departmentId ? { departmentId } : {}),
+  valider: (id, accept, motif) => api.patch(`/tickets/${id}/valider`, { accept, motif }),
   transfer: (id, toUserId) => api.patch(`/tickets/${id}/transfer`, { toUserId }),
   respondTransfer: (id, accept) => api.patch(`/tickets/${id}/transfer/respond`, { accept }),
   comment: (id, content, isInternal = false) =>
@@ -63,6 +68,15 @@ export const chatApi = {
   unread: () => api.get("/chat/unread"),
   markRoomRead: (id) => api.post(`/chat/rooms/${id}/read`),
   upload: (formData) => api.postForm("/chat/upload", formData),
+};
+
+export const configApi = {
+  get: () => api.get("/config"),
+  saveSla: (entries) => api.patch("/config/sla", { entries }),
+  saveCalendrier: (payload) => api.patch("/config/calendrier", payload),
+  addFerie: (date, libelle) => api.post("/config/ferie", { date, libelle }),
+  removeFerie: (id) => api.del(`/config/ferie/${id}`),
+  setDispatcher: (userId, peutDispatcher) => api.patch(`/config/dispatcher/${userId}`, { peutDispatcher }),
 };
 
 export const settingsApi = {

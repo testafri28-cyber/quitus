@@ -19,6 +19,13 @@ const NOTIF_ICON = {
   transfer_refused: "x",
   chat: "message",
   mention: "user",
+  rappel: "clock",
+  escalade: "alertTriangle",
+  a_trier: "filter",
+  validation_requise: "check",
+  valide: "check",
+  refuse: "x",
+  nouvelle_demande: "inbox",
 };
 
 function relTime(iso) {

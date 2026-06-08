@@ -5,7 +5,7 @@ import { FilterDropdown } from "../components/Controls.jsx";
 import { TypeChip, UrgencyPill, StatusChip, EmitterBadge, Avatar } from "../components/Badges.jsx";
 import { ticketsApi } from "../api/endpoints.js";
 import { useAuth } from "../context/AuthContext.jsx";
-import { TYPE_META, TYPES, STATUS_META, STATUS_ORDER, URGENCY_META, URGENCIES, serviceIcon, formatDate, ticketAlerts, ALERT_META, ALERT_ORDER } from "../lib/design.js";
+import { TYPE_META, TYPES, STATUS_META, STATUS_ORDER, URGENCY_META, URGENCIES, serviceIcon, formatDate, ticketAlerts, ALERT_META, ALERT_ORDER, slaBadge } from "../lib/design.js";
 
 export default function Dashboard() {
   const { space } = useParams();
@@ -176,7 +176,10 @@ export default function Dashboard() {
                         </span>
                       )}
                     </div>
-                    <div className="t-id mono">{t.reference}</div>
+                    <div className="row" style={{ gap: 8, marginTop: 2 }}>
+                      <span className="t-id mono">{t.reference}</span>
+                      {(() => { const s = slaBadge(t); return s ? <span className="sla-badge" style={{ background: s.color }}><Icon name="clock" />{s.label}</span> : null; })()}
+                    </div>
                   </div>
                   <div className="t-svc">
                     <span className="ts-ico"><Icon name={serviceIcon(t.department?.code)} /></span>

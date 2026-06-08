@@ -7,11 +7,13 @@ export const TYPE_META = {
 export const TYPES = ["INTERVENTION", "NEED"];
 
 export const URGENCY_META = {
-  NORMAL: { cls: "normale", label: "Normale", hint: "Traitement dans le flux normal." },
-  HIGH: { cls: "haute", label: "Haute", hint: "Traitement prioritaire sous 24 h." },
-  URGENT: { cls: "urgente", label: "Urgente", hint: "À traiter immédiatement — notifie le responsable du service." },
+  CRITIQUE: { cls: "critique", label: "Critique", hint: "Voie express : file directe + notification immédiate." },
+  URGENT: { cls: "urgente", label: "Urgente", hint: "Voie express — traitement immédiat." },
+  NORMAL: { cls: "normale", label: "Normale", hint: "Traitement dans le flux normal (passe par le tri)." },
+  FAIBLE: { cls: "faible", label: "Faible", hint: "Sans contrainte de délai forte." },
+  HIGH: { cls: "haute", label: "Haute", hint: "Traitement prioritaire (hérité)." }, // legacy
 };
-export const URGENCIES = ["NORMAL", "HIGH", "URGENT"];
+export const URGENCIES = ["CRITIQUE", "URGENT", "NORMAL", "FAIBLE"];
 
 export const STATUS_META = {
   NEW: { cls: "nouveau", label: "Nouveau" },
@@ -19,12 +21,30 @@ export const STATUS_META = {
   ON_HOLD: { cls: "attente", label: "En attente" },
   RESOLVED: { cls: "resolu", label: "Résolu" },
   CLOSED: { cls: "cloture", label: "Clôturé" },
+  A_TRIER: { cls: "tri", label: "À trier" },
+  EN_ATTENTE_VALIDATION: { cls: "validation", label: "À valider" },
 };
-export const STATUS_ORDER = ["NEW", "IN_PROGRESS", "ON_HOLD", "RESOLVED", "CLOSED"];
+export const STATUS_ORDER = ["A_TRIER", "EN_ATTENTE_VALIDATION", "NEW", "IN_PROGRESS", "ON_HOLD", "RESOLVED", "CLOSED"];
 
 // Transition « action principale » côté agent.
 export const NEXT_STATUS = { NEW: "IN_PROGRESS", IN_PROGRESS: "RESOLVED", ON_HOLD: "IN_PROGRESS", RESOLVED: "CLOSED", CLOSED: null };
 export const NEXT_LABEL = { NEW: "Prendre la main", IN_PROGRESS: "Marquer résolu", ON_HOLD: "Reprendre", RESOLVED: "Clôturer", CLOSED: null };
+
+// Badge d'échéance SLA (prise en main). Le délai est déjà calculé en heures ouvrées
+// côté serveur ; on affiche ici le temps restant jusqu'à l'échéance + une couleur.
+export function slaBadge(ticket) {
+  if (!ticket?.priseEnMainAvant || ticket.prisEnMainA) return null;
+  if (["RESOLVED", "CLOSED", "A_TRIER", "EN_ATTENTE_VALIDATION"].includes(ticket.status)) return null;
+  const ms = new Date(ticket.priseEnMainAvant).getTime() - Date.now();
+  const overdue = ms < 0;
+  const h = Math.floor(Math.abs(ms) / 3600000), m = Math.round((Math.abs(ms) % 3600000) / 60000);
+  const dur = h >= 1 ? `${h} h` : `${m} min`;
+  return {
+    overdue,
+    label: overdue ? `Retard · ${dur}` : `Échéance · ${dur}`,
+    color: overdue ? "#c66150" : ms < 2 * 3600000 ? "#c9933a" : "#4f9d77",
+  };
+}
 
 export const SPACE_META = {
   global: { key: "global", name: "Espace Global", sub: "Demandes cross-entreprises", mono: "GL", color: "#6e62b6" },

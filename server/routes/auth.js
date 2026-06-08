@@ -29,6 +29,7 @@ function publicUser(user) {
       : null,
     presence: user.presence,
     peutDispatcher: user.peutDispatcher,
+    estResponsable: (user.managedDepartments?.length || 0) > 0, // responsable d'au moins un service
     createdAt: user.createdAt,
   };
 }
@@ -50,7 +51,7 @@ router.post("/login", async (req, res, next) => {
 
     const user = await prisma.user.findUnique({
       where: { email: email.toLowerCase().trim() },
-      include: { department: true, company: true },
+      include: { department: true, company: true, managedDepartments: { select: { id: true } } },
     });
 
     // Message volontairement générique (pas de fuite sur l'existence du compte).
@@ -70,7 +71,7 @@ router.get("/me", requireAuth, async (req, res, next) => {
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.user.id },
-      include: { department: true, company: true },
+      include: { department: true, company: true, managedDepartments: { select: { id: true } } },
     });
     if (!user) return res.status(404).json({ error: "Utilisateur introuvable." });
     res.json({ user: publicUser(user) });

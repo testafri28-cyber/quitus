@@ -51,6 +51,7 @@ export function PresenceProvider({ children }) {
     s.on("presence:status", ({ userId, presence }) => setStatuses((prev) => new Map(prev).set(userId, presence)));
     s.on("chat:activity", ({ roomId }) => setUnread((u) => ({ ...u, [roomId]: (u[roomId] || 0) + 1 })));
     s.on("chat:mention", () => refreshNotifs()); // mention → la cloche se met à jour tout de suite
+    s.on("notif:new", () => refreshNotifs());     // toute notification cloche (rappel, escalade, tri…) en temps réel
 
     return () => { s.disconnect(); socketRef.current = null; setSocket(null); };
   }, [user, refreshNotifs]);

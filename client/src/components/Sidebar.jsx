@@ -11,20 +11,27 @@ import { spaceColor } from "../lib/brand.js";
 import { SPACE_META, allowedSpaces, spaceIndexScreen } from "../lib/spaces.js";
 import { ROLE_LABELS, inkOn } from "../lib/design.js";
 
-function navItemsFor(space, counts, chatUnread, mentioned) {
+function navItemsFor(space, counts, chatUnread, mentioned, user) {
   const chat = { k: "chat", label: "Discussion", icon: "message", badge: chatUnread || undefined, at: mentioned };
+  // Files de travail du routage, selon les permissions de l'utilisateur.
+  const routage = [];
+  if (user?.peutDispatcher) routage.push({ k: "tri", label: "Boîte de tri", icon: "filter" });
+  if (user?.estResponsable) routage.push({ k: "valider", label: "À valider", icon: "check" });
+
   if (space === "global")
     return [
       { k: "", label: "Accueil", icon: "grid" },
       { k: "form", label: "Nouvelle demande", icon: "plusCircle" },
       { k: "leave", label: "Demande de congé", icon: "calendar" },
       { k: "dashboard", label: "Suivi des demandes", icon: "inbox", badge: counts.total },
+      ...routage,
       chat,
     ];
   if (space === "admin")
     return [
       { k: "dashboard", label: "Toutes les demandes", icon: "inbox", badge: counts.total },
       { k: "form", label: "Nouvelle demande", icon: "plusCircle" },
+      ...routage,
       { k: "services", label: "Annuaire des services", icon: "grid" },
       chat,
       { k: "gestion", label: "Gestion", icon: "settings" },
@@ -33,6 +40,7 @@ function navItemsFor(space, counts, chatUnread, mentioned) {
     { k: "dashboard", label: "File de tickets", icon: "inbox", badge: counts.open },
     { k: "form", label: "Nouvelle demande", icon: "plusCircle" },
     { k: "leave", label: "Demande de congé", icon: "calendar" },
+    ...routage,
     chat,
     { k: "services", label: "Annuaire des services", icon: "grid" },
   ];
@@ -107,7 +115,7 @@ export function Sidebar({ space, screen, counts, collapsed, onToggle }) {
       )}
 
       <div className="nav-group-label">Navigation</div>
-      {navItemsFor(space, counts, totalUnread, mentioned).map((it) => (
+      {navItemsFor(space, counts, totalUnread, mentioned, user).map((it) => (
         <button key={it.k || "home"} className={"nav-item" + (screen === it.k ? " active" : "")} onClick={() => goto(it.k)} title={collapsed ? it.label : undefined}>
           <Icon name={it.icon} />
           <span>{it.label}</span>

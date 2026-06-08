@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { departmentsApi, usersApi, settingsApi, auditApi } from "../api/endpoints.js";
+import { departmentsApi, usersApi, settingsApi, auditApi, configApi } from "../api/endpoints.js";
 import { downloadFile } from "../api/client.js";
 import { Icon } from "../components/Icon.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
@@ -9,6 +9,7 @@ import { applyBrand } from "../lib/brand.js";
 import { EmitterBadge } from "../components/Badges.jsx";
 import { UserHistoryModal } from "../components/UserHistoryModal.jsx";
 import { STATUS_ORDER, STATUS_META, ROLE_LABELS, formatDate, inkOn, EVENT_META, EVENT_ACTIONS, eventSentence } from "../lib/design.js";
+import { RoutageConfig } from "./RoutageConfig.jsx";
 
 export default function AdminGestion() {
   const [tab, setTab] = useState("stats");
@@ -20,7 +21,7 @@ export default function AdminGestion() {
           <p className="page-sub">Indicateurs consolidés, utilisateurs et services des deux entreprises.</p>
         </div>
         <div className="tabs">
-          {[["stats", "Indicateurs"], ["perf", "Performance"], ["audit", "Audit"], ["users", "Utilisateurs"], ["depts", "Services & entreprises"], ["brand", "Apparence"], ["params", "Paramètres"]].map(([k, l]) => (
+          {[["stats", "Indicateurs"], ["perf", "Performance"], ["audit", "Audit"], ["users", "Utilisateurs"], ["depts", "Services & entreprises"], ["routage", "Routage & SLA"], ["brand", "Apparence"], ["params", "Paramètres"]].map(([k, l]) => (
             <button key={k} className={"tab" + (tab === k ? " active" : "")} onClick={() => setTab(k)}>{l}</button>
           ))}
         </div>
@@ -29,6 +30,7 @@ export default function AdminGestion() {
         {tab === "audit" && <Audit />}
         {tab === "users" && <Users />}
         {tab === "depts" && <Depts />}
+        {tab === "routage" && <RoutageConfig />}
         {tab === "brand" && <Brand />}
         {tab === "params" && <Params />}
       </div>
