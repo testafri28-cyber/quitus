@@ -13,6 +13,14 @@ export function socketConnectionCount() {
   return ioRef ? ioRef.engine.clientsCount : 0;
 }
 
+// Émet un évènement aux salles personnelles d'une liste d'utilisateurs (best-effort).
+export function emitToUsers(userIds, event, payload) {
+  if (!ioRef) return;
+  for (const id of new Set((userIds || []).filter(Boolean))) {
+    ioRef.to(`user:${id}`).emit(event, payload);
+  }
+}
+
 export function initSocket(httpServer) {
   const io = new Server(httpServer, {
     cors: { origin: allowedOrigins, credentials: true },

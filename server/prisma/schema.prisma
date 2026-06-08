@@ -18,8 +18,10 @@ enum Role {
 
 enum Urgency {
   NORMAL
-  HIGH
+  HIGH // hérité — équivaut à URGENT pour le SLA (anciens tickets)
   URGENT
+  CRITIQUE
+  FAIBLE
 }
 
 enum TicketType {
@@ -39,6 +41,8 @@ enum TicketStatus {
   ON_HOLD
   RESOLVED
   CLOSED
+  A_TRIER                // destination non résolue → boîte de tri du modérateur
+  EN_ATTENTE_VALIDATION  // Besoin en attente du feu vert du responsable
 }
 
 // Disponibilité déclarée par l'utilisateur. « En ligne / Pas en ligne » est dérivé des connexions socket ;
@@ -102,6 +106,9 @@ model User {
 
   // Disponibilité déclarée (présence en ligne/hors-ligne calculée côté socket)
   presence Presence @default(AVAILABLE)
+
+  // Permission de dispatch (modérateur de la boîte de tri) — multi-titulaires, périmètre = espace/entreprise.
+  peutDispatcher Boolean @default(false) @map("peut_dispatcher")
 
   submittedTickets  Ticket[]         @relation("TicketSubmitter")
   assignedTickets   Ticket[]         @relation("TicketAssignee")
@@ -172,6 +179,14 @@ model Ticket {
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
   resolvedAt    DateTime? @map("resolved_at")
+
+  // SLA (échéances calculées en heures ouvrées quand la demande entre dans la file du service).
+  priseEnMainAvant DateTime? @map("prise_en_main_avant")
+  rappelA          DateTime? @map("rappel_a")
+  escaladeA        DateTime? @map("escalade_a")
+  prisEnMainA      DateTime? @map("pris_en_main_a")
+  niveauEscalade   Int       @default(0) @map("niveau_escalade")
+  rappelEnvoye     Boolean   @default(false) @map("rappel_envoye")
 
   comments      Comment[]
   feedback      Feedback?
@@ -341,6 +356,48 @@ model Feedback {
   createdAt DateTime @default(now()) @map("created_at")
 
   @@map("feedback")
+}
+
+// ============================================================
+// Configuration du routage / SLA (tout en base, rien en dur).
+// companyId nul = défaut global ; une ligne plus spécifique l'emporte.
+// ============================================================
+
+// Grille SLA : durées EN HEURES OUVRÉES, une ligne par urgence.
+model PolitiqueSLA {
+  id           String  @id @default(cuid())
+  companyId    String? @map("company_id")
+  urgence      Urgency
+  priseEnMainH Float   @map("prise_en_main_h")
+  rappelH      Float   @map("rappel_h")
+  escaladeH    Float   @map("escalade_h")
+
+  @@unique([companyId, urgence])
+  @@map("politiques_sla")
+}
+
+// Calendrier des heures ouvrées (par entreprise).
+model CalendrierOuvre {
+  id         String  @id @default(cuid())
+  companyId  String? @unique @map("company_id")
+  jours      Int[]   // 1=lundi … 5=vendredi
+  heureDebut String  @default("08:00") @map("heure_debut")
+  heureFin   String  @default("16:30") @map("heure_fin")
+  pauseDebut String? @default("12:00") @map("pause_debut")
+  pauseFin   String? @default("14:00") @map("pause_fin")
+
+  @@map("calendriers_ouvres")
+}
+
+// Jours fériés (l'horloge SLA se fige).
+model JourFerie {
+  id        String   @id @default(cuid())
+  companyId String?  @map("company_id")
+  date      DateTime @db.Date
+  libelle   String
+
+  @@index([date])
+  @@map("jours_feries")
 }
 
 // ============================================================

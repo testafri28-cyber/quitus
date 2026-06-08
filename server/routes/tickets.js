@@ -13,13 +13,15 @@ import {
   notifyTicketClosed,
 } from "../services/email.js";
 import { notify, serviceMemberIds, STATUS_LABELS } from "../services/notify.js";
+import { notifier } from "../services/notifier.js";
+import { decisionRoutage, calculerEcheances, moderateursDisponibles, entreeEnFile } from "../services/cycleDemande.js";
 import { getSettings } from "./settings.js";
 import { logEvent } from "../services/audit.js";
 
 const router = Router();
 
 const STATUSES = ["NEW", "IN_PROGRESS", "ON_HOLD", "RESOLVED", "CLOSED"];
-const URGENCIES = ["NORMAL", "HIGH", "URGENT"];
+const URGENCIES = ["NORMAL", "HIGH", "URGENT", "CRITIQUE", "FAIBLE"];
 const TYPES = ["INTERVENTION", "NEED"];
 
 /* ---------------- Upload de pièce jointe ---------------- */
@@ -246,20 +248,26 @@ router.post("/", requireAuth, upload.array("attachments", 5), async (req, res, n
       return res.status(403).json({ error: `Accès refusé à l'espace ${space}.` });
     }
 
-    // Résolution du service destinataire : par id (direct) ou via le libellé de catégorie.
-    let department;
+    // Résolution du service destinataire : par id (direct) ou via le libellé de catégorie (règle).
+    let department = null;
     if (departmentId) {
       department = await prisma.department.findUnique({ where: { id: departmentId }, include: { company: true } });
     } else if (category) {
       const code = resolveServiceCode(category);
       department = await prisma.department.findUnique({ where: { code }, include: { company: true } });
     }
+    // Destination « claire » = un service a pu être déterminé (choisi au formulaire ou par règle).
+    const destinationClaire = !!department;
     if (!department) {
-      return res.status(400).json({ error: "Service destinataire introuvable." });
+      // Aucune destination → service de tri par défaut ; la demande ira en A_TRIER (le modérateur tranche).
+      department = await prisma.department.findFirst({ where: { code: "it" }, include: { company: true } })
+                || await prisma.department.findFirst({ include: { company: true } });
     }
-
-    // Le service doit être accessible depuis l'espace courant.
-    if (!departmentVisibleInSpace(department, space)) {
+    if (!department) {
+      return res.status(400).json({ error: "Aucun service disponible." });
+    }
+    // Le service doit être accessible depuis l'espace courant (uniquement si destination explicite).
+    if (destinationClaire && !departmentVisibleInSpace(department, space)) {
       return res.status(400).json({ error: "Ce service n'est pas disponible dans cet espace." });
     }
 
@@ -294,6 +302,14 @@ router.post("/", requireAuth, upload.array("attachments", 5), async (req, res, n
 
     const reference = await nextReference();
 
+    // Routage (Lot 3). Les congés gardent le flux direct (NEW). Sinon, matrice type × urgence.
+    const isLeave = !!leaveStart;
+    const decision = isLeave
+      ? { statut: "NEW", express: false, entreEnFile: true }
+      : decisionRoutage({ type, urgency, destinationClaire });
+    // SLA calculé seulement quand la demande ENTRE en file (sinon après tri/validation).
+    const echeances = decision.entreEnFile ? await calculerEcheances(urgency, new Date(), req.user.companyId) : {};
+
     const ticket = await prisma.ticket.create({
       data: {
         reference,
@@ -302,7 +318,8 @@ router.post("/", requireAuth, upload.array("attachments", 5), async (req, res, n
         category: categoryLabel,
         type,
         urgency,
-        status: "NEW",
+        status: decision.statut,
+        ...echeances,
         sourceSpace: space,
         sourceCompanyId: req.user.companyId, // entreprise de l'émetteur (badge)
         departmentId: department.id,
@@ -320,11 +337,21 @@ router.post("/", requireAuth, upload.array("attachments", 5), async (req, res, n
 
     notifyTicketCreated(ticket, ticket.submitter.email);
 
-    // Notifications in-app : membres du service (hors émetteur/suggéré) + membre suggéré.
-    const memberIds = await serviceMemberIds(department.id, [req.user.id, suggested]);
-    await notify(memberIds, { type: "new_ticket", text: `Nouvelle demande « ${title} » dans ${department.name}`, ticketId: ticket.id });
-    if (suggested && suggested !== req.user.id) {
-      await notify([suggested], { type: "suggested", text: `Demande « ${title} » suggérée pour vous`, ticketId: ticket.id });
+    // Notifications selon l'aiguillage.
+    if (decision.statut === "A_TRIER") {
+      const mods = (await moderateursDisponibles(req.user.companyId)).filter((id) => id !== req.user.id);
+      await notifier({ evenement: "a_trier", destinataires: mods, demande: ticket });
+    } else if (decision.statut === "EN_ATTENTE_VALIDATION") {
+      const respId = department.responsibleId;
+      const cible = respId && respId !== req.user.id ? [respId] : (await moderateursDisponibles(req.user.companyId)).filter((id) => id !== req.user.id);
+      await notifier({ evenement: "validation_requise", destinataires: cible, demande: ticket });
+    } else {
+      // En file : membres du service (hors émetteur/suggéré) + membre suggéré.
+      const memberIds = await serviceMemberIds(department.id, [req.user.id, suggested]);
+      await notify(memberIds, { type: "new_ticket", text: `Nouvelle demande « ${title} » dans ${department.name}`, ticketId: ticket.id });
+      if (suggested && suggested !== req.user.id) {
+        await notify([suggested], { type: "suggested", text: `Demande « ${title} » suggérée pour vous`, ticketId: ticket.id });
+      }
     }
 
     await logEvent({ ticketId: ticket.id, actorId: req.user.id, action: "created", detail: { title } });

@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { resolveServiceCode } from "../services/routing.js";
+import { seedConfig } from "./seed-config.js";
 // Note : on insère les TicketEvent directement (prisma) pour pouvoir backdater l'événement « created ».
 
 const prisma = new PrismaClient();
@@ -225,6 +226,9 @@ async function main() {
   console.log(`                 ouattara.zie@wca.ci, ebouat.guy@wca.ci,`);
   console.log(`                 employe.wca@wca.ci + salif.diallo@wca.ci (Logistique WCA), employe.idc@idc.ci (Réseau)`);
   console.log(`   Mot de passe: ${PASSWORD}`);
+
+  // Config routage/SLA (grille SLA, calendrier ouvré, jours fériés, modérateurs).
+  await seedConfig(prisma);
 }
 
 main()

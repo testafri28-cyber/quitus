@@ -2,6 +2,7 @@
 import { prisma } from "../lib/prisma.js";
 import { sendPushToSubs } from "./push.js";
 import { notifyGeneric } from "./email.js";
+import { emitToUsers } from "../socket.js";
 
 export const STATUS_LABELS = {
   NEW: "Nouveau",
@@ -19,6 +20,9 @@ export async function notify(userIds, { type, text, ticketId }) {
     await prisma.notification.createMany({
       data: ids.map((userId) => ({ userId, type, text, ticketId: ticketId || null })),
     });
+
+    // Cloche en TEMPS RÉEL (la cloche est le socle : toujours émise).
+    emitToUsers(ids, "notif:new", { type, text, ticketId: ticketId || null });
 
     // Dispatch hors-site selon les préférences de chaque destinataire.
     const recips = await prisma.user.findMany({
