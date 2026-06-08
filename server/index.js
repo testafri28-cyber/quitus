@@ -7,6 +7,7 @@ import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { initSocket } from "./socket.js";
+import { demarrerScheduler } from "./scheduler.js";
 import { UPLOAD_DIR } from "./lib/uploads.js";
 import { allowedOrigins } from "./lib/cors.js";
 
@@ -76,6 +77,7 @@ app.use((err, _req, res, _next) => {
 const PORT = process.env.PORT || 4000;
 const server = http.createServer(app);
 initSocket(server); // Socket.IO (discussion temps réel)
+demarrerScheduler(); // rappels & escalades SLA (~5 min)
 server.listen(PORT, () => {
   console.log(`🚀 API + WebSocket en écoute sur http://localhost:${PORT}`);
 });

@@ -21,6 +21,7 @@ export async function requireAuth(req, res, next) {
         role: true,
         companyId: true,
         departmentId: true,
+        peutDispatcher: true,
         company: { select: { slug: true } },
       },
     });

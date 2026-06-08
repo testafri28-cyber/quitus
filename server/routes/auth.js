@@ -28,6 +28,7 @@ function publicUser(user) {
       ? { id: user.department.id, name: user.department.name, code: user.department.code }
       : null,
     presence: user.presence,
+    peutDispatcher: user.peutDispatcher,
     createdAt: user.createdAt,
   };
 }

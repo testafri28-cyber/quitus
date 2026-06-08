@@ -122,6 +122,34 @@ router.get("/", requireAuth, async (req, res, next) => {
   }
 });
 
+/* ---------------- Files de travail (AVANT /:id pour ne pas être capturées) ---------------- */
+// Boîte de tri du modérateur : demandes À TRIER (périmètre = son entreprise).
+router.get("/a-trier", requireAuth, async (req, res, next) => {
+  try {
+    if (!req.user.peutDispatcher && req.user.role !== "ADMIN") {
+      return res.status(403).json({ error: "Réservé aux modérateurs (dispatch)." });
+    }
+    const where = { status: "A_TRIER" };
+    if (req.user.role !== "ADMIN") where.sourceCompanyId = req.user.companyId;
+    const tickets = await prisma.ticket.findMany({ where, include: ticketInclude, orderBy: { createdAt: "asc" } });
+    res.json({ tickets });
+  } catch (err) { next(err); }
+});
+
+// File de validation du responsable : Besoins EN_ATTENTE_VALIDATION des services qu'il gère.
+router.get("/a-valider", requireAuth, async (req, res, next) => {
+  try {
+    const where = { status: "EN_ATTENTE_VALIDATION" };
+    if (req.user.role !== "ADMIN") {
+      const managed = await prisma.department.findMany({ where: { responsibleId: req.user.id }, select: { id: true } });
+      if (!managed.length) return res.json({ tickets: [] });
+      where.departmentId = { in: managed.map((d) => d.id) };
+    }
+    const tickets = await prisma.ticket.findMany({ where, include: ticketInclude, orderBy: { createdAt: "asc" } });
+    res.json({ tickets });
+  } catch (err) { next(err); }
+});
+
 /* ---------------- GET /api/tickets/:id ---------------- */
 router.get("/:id", requireAuth, async (req, res, next) => {
   try {
@@ -362,6 +390,80 @@ router.post("/", requireAuth, upload.array("attachments", 5), async (req, res, n
   }
 });
 
+/* ---------------- Boîte de tri (modérateurs) & file de validation (responsables) ---------------- */
+// Trier une demande : confirmer la destination ou rediriger vers un autre service.
+const trierSchema = z.object({ departmentId: z.string().optional() });
+router.patch("/:id/trier", requireAuth, async (req, res, next) => {
+  try {
+    if (!req.user.peutDispatcher && req.user.role !== "ADMIN") return res.status(403).json({ error: "Réservé aux modérateurs." });
+    const parsed = trierSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: "Paramètres invalides." });
+    const ticket = await prisma.ticket.findUnique({ where: { id: req.params.id }, include: { department: true } });
+    if (!ticket) return res.status(404).json({ error: "Demande introuvable." });
+    if (ticket.status !== "A_TRIER") return res.status(409).json({ error: "Cette demande n'est plus à trier." });
+    if (req.user.role !== "ADMIN" && ticket.sourceCompanyId !== req.user.companyId) return res.status(403).json({ error: "Hors de votre périmètre." });
+
+    let departmentId = ticket.departmentId;
+    if (parsed.data.departmentId) {
+      const dep = await prisma.department.findUnique({ where: { id: parsed.data.departmentId } });
+      if (!dep) return res.status(400).json({ error: "Service cible introuvable." });
+      departmentId = dep.id;
+    }
+    const dep = await prisma.department.findUnique({ where: { id: departmentId } });
+
+    // Transition : un Besoin part en validation ; une Intervention entre en file (SLA calculé).
+    let data = { departmentId };
+    if (ticket.type === "NEED") {
+      data.status = "EN_ATTENTE_VALIDATION";
+    } else {
+      const ech = await calculerEcheances(ticket.urgency, new Date(), ticket.sourceCompanyId);
+      data = { ...data, status: "NEW", ...ech, niveauEscalade: 0, rappelEnvoye: false };
+    }
+    const updated = await prisma.ticket.update({ where: { id: ticket.id }, data, include: ticketInclude });
+
+    if (updated.status === "EN_ATTENTE_VALIDATION") {
+      const cible = dep.responsibleId ? [dep.responsibleId] : await moderateursDisponibles(ticket.sourceCompanyId);
+      await notifier({ evenement: "validation_requise", destinataires: cible, demande: updated });
+    } else {
+      const memberIds = await serviceMemberIds(departmentId, [ticket.submittedById]);
+      await notify(memberIds, { type: "new_ticket", text: `Demande « ${updated.title} » orientée vers ${dep.name}`, ticketId: updated.id });
+    }
+    await logEvent({ ticketId: ticket.id, actorId: req.user.id, action: "reassigned", detail: { from: "À trier", to: dep.name } });
+    res.json({ ticket: updated });
+  } catch (err) { next(err); }
+});
+
+// Valider (ou refuser) un Besoin en attente — réservé au responsable du service (ou admin).
+const validerSchema = z.object({ accept: z.boolean(), motif: z.string().optional() });
+router.patch("/:id/valider", requireAuth, async (req, res, next) => {
+  try {
+    const parsed = validerSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: "Paramètres invalides." });
+    const ticket = await prisma.ticket.findUnique({ where: { id: req.params.id }, include: { department: true } });
+    if (!ticket) return res.status(404).json({ error: "Demande introuvable." });
+    if (ticket.status !== "EN_ATTENTE_VALIDATION") return res.status(409).json({ error: "Cette demande n'attend pas de validation." });
+    const isResp = ticket.department?.responsibleId === req.user.id;
+    if (!isResp && req.user.role !== "ADMIN") return res.status(403).json({ error: "Validation réservée au responsable du service." });
+
+    if (parsed.data.accept) {
+      const ech = await calculerEcheances(ticket.urgency, new Date(), ticket.sourceCompanyId);
+      const updated = await prisma.ticket.update({ where: { id: ticket.id }, data: { status: "NEW", ...ech, niveauEscalade: 0, rappelEnvoye: false }, include: ticketInclude });
+      const memberIds = await serviceMemberIds(ticket.departmentId, [ticket.submittedById]);
+      await notify(memberIds, { type: "new_ticket", text: `Besoin validé « ${updated.title} » dans ${ticket.department.name}`, ticketId: updated.id });
+      await notifier({ evenement: "valide", destinataires: [ticket.submittedById], demande: updated });
+      await logEvent({ ticketId: ticket.id, actorId: req.user.id, action: "status", detail: { from: "EN_ATTENTE_VALIDATION", to: "NEW" } });
+      return res.json({ ticket: updated });
+    }
+
+    const motif = (parsed.data.motif || "").trim();
+    const updated = await prisma.ticket.update({ where: { id: ticket.id }, data: { status: "CLOSED" }, include: ticketInclude });
+    if (motif) await prisma.comment.create({ data: { ticketId: ticket.id, authorId: req.user.id, content: `Besoin refusé : ${motif}`, isInternal: false } });
+    await notifier({ evenement: "refuse", destinataires: [ticket.submittedById], demande: updated, texte: `Votre besoin « ${updated.title} » a été refusé${motif ? ` : ${motif}` : ""}.` });
+    await logEvent({ ticketId: ticket.id, actorId: req.user.id, action: "status", detail: { from: "EN_ATTENTE_VALIDATION", to: "CLOSED" } });
+    res.json({ ticket: updated });
+  } catch (err) { next(err); }
+});
+
 /* ---------------- PATCH /api/tickets/:id/status ---------------- */
 const statusSchema = z.object({ status: z.enum(STATUSES) });
 
@@ -488,6 +590,8 @@ router.patch("/:id/assign", requireAuth, async (req, res, next) => {
     }
 
     if (data.assignedToId && ticket.status === "NEW") data.status = "IN_PROGRESS";
+    // Prise en main → fige l'horloge SLA (le scheduler s'arrête).
+    if (data.assignedToId && !ticket.prisEnMainA) data.prisEnMainA = new Date();
 
     const updated = await prisma.ticket.update({
       where: { id: ticket.id },
