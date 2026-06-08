@@ -11,6 +11,7 @@
     "build": "prisma generate && prisma migrate deploy",
     "seed": "node prisma/seed.js",
     "seed:config": "node prisma/seed-config.js",
+    "seed:staffing": "node prisma/seed-staffing.js",
     "seed:superadmin": "node prisma/seed-superadmin.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",

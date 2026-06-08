@@ -2,6 +2,7 @@ import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { resolveServiceCode } from "../services/routing.js";
 import { seedConfig } from "./seed-config.js";
+import { seedStaffing } from "./seed-staffing.js";
 // Note : on insère les TicketEvent directement (prisma) pour pouvoir backdater l'événement « created ».
 
 const prisma = new PrismaClient();
@@ -229,6 +230,8 @@ async function main() {
 
   // Config routage/SLA (grille SLA, calendrier ouvré, jours fériés, modérateurs).
   await seedConfig(prisma);
+  // Dotation des services : 3 membres par service + un responsable.
+  await seedStaffing(prisma);
 }
 
 main()
